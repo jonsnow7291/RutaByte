@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>RutaByte | Recuperar Contrasena</title>
+    <link rel="stylesheet" href="css/styles.css" />
+    <script src="js/recuperar.js" defer></script>
+  </head>
+  <body class="auth-page">
+    <main class="auth-shell">
+      <section class="auth-card" aria-labelledby="recoverTitle">
+        <aside class="auth-aside">
+          <div>
+            <img src="assets/Logo/logo.png" alt="RutaByte" class="brand-logo" />
+            <h1>Recuperar acceso</h1>
+            <p>
+              Sigue los pasos para restablecer tu contrasena de manera segura.
+            </p>
+          </div>
+
+          <div class="auth-highlight">
+            <strong>Proceso seguro</strong>
+            <span>Se genera un token unico de un solo uso con 15 minutos de vigencia.</span>
+          </div>
+        </aside>
+
+        <section class="auth-content">
+          <!-- Paso 1: correo -->
+          <form id="solicitarForm" class="auth-form" novalidate>
+            <div>
+              <h2 id="recoverTitle">Recuperar contrasena</h2>
+              <p>Ingresa tu correo electronico registrado.</p>
+            </div>
+
+            <div class="field-group">
+              <label for="correo">Correo electronico</label>
+              <input
+                id="correo"
+                name="correo"
+                type="email"
+                autocomplete="username"
+                inputmode="email"
+                placeholder="admin@rutabyte.com"
+                required
+              />
+            </div>
+
+            <p id="solicitarMsg" class="auth-error" role="alert" aria-live="polite"></p>
+
+            <button class="auth-submit" type="submit">Continuar</button>
+          </form>
+
+          <!-- Paso 2: nueva contraseña (oculto inicialmente) -->
+          <form id="resetForm" class="auth-form" style="display:none" novalidate>
+            <div>
+              <h2>Nueva contrasena</h2>
+              <p>Ingresa tu nueva contrasena para restablecer el acceso.</p>
+            </div>
+
+            <div class="field-group">
+              <label for="nueva_contrasena">Nueva contrasena</label>
+              <input
+                id="nueva_contrasena"
+                name="nueva_contrasena"
+                type="password"
+                autocomplete="new-password"
+                placeholder="Minimo 6 caracteres"
+                minlength="6"
+                required
+              />
+            </div>
+
+            <div class="field-group">
+              <label for="confirmar_contrasena">Confirmar contrasena</label>
+              <input
+                id="confirmar_contrasena"
+                name="confirmar_contrasena"
+                type="password"
+                autocomplete="new-password"
+                placeholder="Repite la contrasena"
+                minlength="6"
+                required
+              />
+            </div>
+
+            <p id="resetMsg" class="auth-error" role="alert" aria-live="polite"></p>
+
+            <button class="auth-submit" type="submit">Cambiar contrasena</button>
+          </form>
+
+          <p class="auth-footer">
+            <a href="index.html">Volver a Iniciar Sesion</a>
+          </p>
+        </section>
+      </section>
+    </main>
+  </body>
+</html>

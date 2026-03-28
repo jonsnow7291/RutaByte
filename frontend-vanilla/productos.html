@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>RutaByte | Catalogo de Productos</title>
+    <link rel="stylesheet" href="css/styles.css" />
+    <link rel="stylesheet" href="css/sedes.css" />
+    <link rel="stylesheet" href="css/usuarios.css" />
+    <script src="js/auth-guard.js" defer></script>
+    <script src="js/productos.js" defer></script>
+  </head>
+  <body>
+    <main class="sedes-page">
+      <section class="sedes-shell">
+        <header class="sedes-header">
+          <div>
+            <span class="eyebrow">HU-A03</span>
+            <h1>Catalogo de Productos</h1>
+            <p>
+              Administra el catalogo global: crea categorias y productos con
+              precio, descripcion e imagen.
+            </p>
+          </div>
+          <div class="actions-row">
+            <button id="openCatModalBtn" class="btn btn-ghost" type="button">
+              Nueva Categoria
+            </button>
+            <button id="openModalBtn" class="btn btn-primary" type="button">
+              Nuevo Producto
+            </button>
+            <a class="btn btn-ghost" href="dashboard.html">Volver</a>
+          </div>
+        </header>
+
+        <section class="content">
+          <div id="alertSlot" class="alert-slot" aria-live="polite"></div>
+
+          <div class="table-wrap">
+            <table aria-label="Listado de productos">
+              <thead>
+                <tr>
+                  <th>Nombre</th>
+                  <th>Categoria</th>
+                  <th>Precio</th>
+                  <th>Descripcion</th>
+                  <th>Estado</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="productosTableBody"></tbody>
+            </table>
+          </div>
+        </section>
+      </section>
+    </main>
+
+    <!-- Modal Producto -->
+    <div id="productoModal" class="modal" aria-hidden="true">
+      <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+        <div class="modal-header">
+          <div>
+            <span class="eyebrow">Nuevo registro</span>
+            <h2 id="modalTitle">Crear Producto</h2>
+          </div>
+          <button id="closeModalBtn" class="icon-btn" type="button" aria-label="Cerrar modal">
+            &times;
+          </button>
+        </div>
+
+        <form id="productoForm">
+          <div class="modal-body">
+            <div class="field">
+              <label for="nombre">Nombre</label>
+              <input id="nombre" name="nombre" type="text" maxlength="150" required placeholder="Ej. Hamburguesa Clasica" />
+            </div>
+            <div class="field">
+              <label for="categoria_id">Categoria</label>
+              <select id="categoria_id" name="categoria_id" required>
+                <option value="">Seleccionar categoria</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="precio">Precio</label>
+              <input id="precio" name="precio" type="number" min="0" step="0.01" required placeholder="Ej. 15000" />
+            </div>
+            <div class="field">
+              <label for="descripcion">Descripcion</label>
+              <textarea id="descripcion" name="descripcion" maxlength="2000" rows="3" placeholder="Descripcion del producto (opcional)"></textarea>
+            </div>
+            <div class="field">
+              <label for="url_imagen">URL de imagen</label>
+              <input id="url_imagen" name="url_imagen" type="url" maxlength="500" placeholder="https://ejemplo.com/imagen.jpg (opcional)" />
+            </div>
+          </div>
+
+          <div class="modal-footer">
+            <button id="cancelModalBtn" class="btn btn-ghost" type="button">Cancelar</button>
+            <button class="btn btn-primary" type="submit">Guardar Producto</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Modal Categoria -->
+    <div id="categoriaModal" class="modal" aria-hidden="true">
+      <div class="modal-card modal-card--sm" role="dialog" aria-modal="true" aria-labelledby="catModalTitle">
+        <div class="modal-header">
+          <div>
+            <span class="eyebrow">Nuevo registro</span>
+            <h2 id="catModalTitle">Crear Categoria</h2>
+          </div>
+          <button id="closeCatModalBtn" class="icon-btn" type="button" aria-label="Cerrar modal">
+            &times;
+          </button>
+        </div>
+
+        <form id="categoriaForm">
+          <div class="modal-body">
+            <div class="field">
+              <label for="catNombre">Nombre de la categoria</label>
+              <input id="catNombre" name="catNombre" type="text" maxlength="100" required placeholder="Ej. Bebidas" />
+            </div>
+          </div>
+
+          <div class="modal-footer">
+            <button id="cancelCatModalBtn" class="btn btn-ghost" type="button">Cancelar</button>
+            <button class="btn btn-primary" type="submit">Guardar Categoria</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </body>
+</html>

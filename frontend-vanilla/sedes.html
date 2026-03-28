@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>RutaByte | Gestion de Sedes</title>
+    <link rel="stylesheet" href="css/styles.css" />
+    <link rel="stylesheet" href="css/sedes.css" />
+    <script src="js/auth-guard.js" defer></script>
+    <script src="js/sedes.js" defer></script>
+  </head>
+  <body>
+    <main class="sedes-page">
+      <section class="sedes-shell">
+        <header class="sedes-header">
+          <div>
+            <span class="eyebrow">HU-A01</span>
+            <h1>Gestion de Sedes</h1>
+            <p>
+              Administra las sedes disponibles, crea nuevas ubicaciones y
+              desactiva las que ya no se usan.
+            </p>
+          </div>
+          <div class="actions-row">
+            <button id="openModalBtn" class="btn btn-primary" type="button">
+              Nueva Sede
+            </button>
+            <a class="btn btn-ghost" href="index.html">Volver</a>
+          </div>
+        </header>
+
+        <section class="content">
+          <div id="alertSlot" class="alert-slot" aria-live="polite"></div>
+
+          <div class="table-wrap">
+            <table aria-label="Listado de sedes">
+              <thead>
+                <tr>
+                  <th>Nombre</th>
+                  <th>Direccion</th>
+                  <th>Ciudad</th>
+                  <th>Estado</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="sedesTableBody"></tbody>
+            </table>
+          </div>
+        </section>
+      </section>
+    </main>
+
+    <div id="sedeModal" class="modal" aria-hidden="true">
+      <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+        <div class="modal-header">
+          <div>
+            <span class="eyebrow">Nuevo registro</span>
+            <h2 id="modalTitle">Crear Sede</h2>
+          </div>
+          <button id="closeModalBtn" class="icon-btn" type="button" aria-label="Cerrar modal">
+            &times;
+          </button>
+        </div>
+
+        <form id="sedeForm">
+          <div class="modal-body">
+            <div class="field">
+              <label for="nombre">Nombre</label>
+              <input
+                id="nombre"
+                name="nombre"
+                type="text"
+                maxlength="100"
+                required
+                placeholder="Ej. Sede Centro"
+              />
+            </div>
+            <div class="field">
+              <label for="direccion">Direccion</label>
+              <input
+                id="direccion"
+                name="direccion"
+                type="text"
+                maxlength="255"
+                required
+                placeholder="Ej. Calle 10 # 20-30"
+              />
+            </div>
+            <div class="field">
+              <label for="ciudad">Ciudad</label>
+              <input
+                id="ciudad"
+                name="ciudad"
+                type="text"
+                maxlength="100"
+                required
+                placeholder="Ej. Bogota"
+              />
+            </div>
+          </div>
+
+          <div class="modal-footer">
+            <button id="cancelModalBtn" class="btn btn-ghost" type="button">
+              Cancelar
+            </button>
+            <button class="btn btn-primary" type="submit">Guardar Sede</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </body>
+</html>

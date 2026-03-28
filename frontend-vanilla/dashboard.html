@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>RutaByte | Panel</title>
+    <link rel="stylesheet" href="css/styles.css" />
+    <script src="js/auth-guard.js" defer></script>
+    <script src="js/dashboard.js" defer></script>
+  </head>
+  <body class="dashboard-page">
+    <main class="dashboard-shell">
+      <section class="dashboard-card" aria-labelledby="dashboardTitle">
+        <aside class="dashboard-sidebar">
+          <div class="dashboard-brand">
+            <img src="assets/Logo/logo.png" alt="RutaByte" class="brand-logo" />
+            <span class="dashboard-role" id="dashboardRole">Acceso</span>
+            <h1 id="dashboardTitle">Panel principal</h1>
+            <p id="dashboardSubtitle">
+              Bienvenido. Desde aqui accedes a los modulos disponibles segun tu rol.
+            </p>
+          </div>
+
+          <div class="dashboard-quick">
+            <div class="dashboard-quick-item">
+              <strong>Sesión activa</strong>
+              <div id="dashboardEmail">Usuario autenticado</div>
+            </div>
+            <div class="dashboard-quick-item">
+              <strong>Estado</strong>
+              <div>Control de acceso habilitado</div>
+            </div>
+          </div>
+        </aside>
+
+        <section class="dashboard-main">
+          <div class="dashboard-topbar">
+            <div>
+              <h2>Modulos disponibles</h2>
+              <p>Selecciona una vista para continuar.</p>
+            </div>
+            <a id="logoutBtn" class="btn btn-ghost logout-link" href="index.html">Cerrar sesion</a>
+          </div>
+
+          <div class="dashboard-grid">
+            <article class="dashboard-tile" id="adminTile">
+              <span class="eyebrow">Administrador</span>
+              <h3>Gestion de Sedes</h3>
+              <p>Administra sedes, alta y desactivacion de registros.</p>
+              <a class="primary-link" href="sedes.html">Abrir Sedes</a>
+            </article>
+
+            <article class="dashboard-tile" id="adminUsuariosTile">
+              <span class="eyebrow">Administrador</span>
+              <h3>Gestion de Usuarios</h3>
+              <p>Crea usuarios con rol de Admin, Cajero o Mesero.</p>
+              <a class="primary-link" href="usuarios.html">Abrir Usuarios</a>
+            </article>
+
+            <article class="dashboard-tile" id="adminProductosTile">
+              <span class="eyebrow">Administrador</span>
+              <h3>Catalogo de Productos</h3>
+              <p>Gestiona categorias y productos del catalogo global.</p>
+              <a class="primary-link" href="productos.html">Abrir Productos</a>
+            </article>
+
+            <article class="dashboard-tile">
+              <span class="eyebrow">Cajero</span>
+              <h3>Panel de Caja</h3>
+              <p>Modulo base preparado para operaciones de caja.</p>
+              <a class="btn btn-ghost" href="#" aria-disabled="true">En construccion</a>
+            </article>
+
+            <article class="dashboard-tile" id="meseroTile">
+              <span class="eyebrow">Mesero</span>
+              <h3>Tomar Pedidos</h3>
+              <p>Selecciona una mesa, agrega productos y confirma pedidos.</p>
+              <a class="primary-link" href="pedidos.html">Abrir Pedidos</a>
+            </article>
+          </div>
+        </section>
+      </section>
+    </main>
+  </body>
+</html>

@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>RutaByte | Tomar Pedido</title>
+    <link rel="stylesheet" href="css/styles.css" />
+    <link rel="stylesheet" href="css/sedes.css" />
+    <link rel="stylesheet" href="css/usuarios.css" />
+    <link rel="stylesheet" href="css/pedidos.css" />
+    <script src="js/auth-guard.js" defer></script>
+    <script src="js/pedidos.js" defer></script>
+  </head>
+  <body>
+    <main class="sedes-page">
+      <section class="sedes-shell">
+        <header class="sedes-header">
+          <div>
+            <span class="eyebrow">Mesero</span>
+            <h1>Tomar Pedido</h1>
+            <p>Selecciona una mesa, agrega productos al pedido y confirma.</p>
+          </div>
+          <div class="actions-row">
+            <a class="btn btn-ghost" href="dashboard.html">Volver</a>
+          </div>
+        </header>
+
+        <section class="content">
+          <div id="alertSlot" class="alert-slot" aria-live="polite"></div>
+
+          <div class="pedido-layout">
+            <!-- Panel izquierdo: selección de mesa y productos -->
+            <div class="pedido-selector">
+              <div class="field">
+                <label for="mesa_id">Mesa</label>
+                <select id="mesa_id" required>
+                  <option value="">Seleccionar mesa</option>
+                </select>
+              </div>
+
+              <div class="field">
+                <label for="categoria_filter">Filtrar por categoria</label>
+                <select id="categoria_filter">
+                  <option value="">Todas</option>
+                </select>
+              </div>
+
+              <div class="productos-grid" id="productosGrid"></div>
+            </div>
+
+            <!-- Panel derecho: resumen del pedido -->
+            <div class="pedido-resumen">
+              <h3>Resumen del pedido</h3>
+              <div class="pedido-items" id="pedidoItems">
+                <p class="empty-state">Agrega productos al pedido.</p>
+              </div>
+              <div class="pedido-total">
+                <strong>Total:</strong>
+                <span id="pedidoTotal">$0</span>
+              </div>
+              <button id="confirmarPedidoBtn" class="btn btn-primary pedido-confirm-btn" type="button" disabled>
+                Confirmar Pedido
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <!-- Lista de pedidos realizados -->
+        <section class="content">
+          <h2 class="section-title">Mis Pedidos</h2>
+          <div class="table-wrap">
+            <table aria-label="Listado de pedidos">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Mesa</th>
+                  <th>Estado</th>
+                  <th>Fecha</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="pedidosTableBody"></tbody>
+            </table>
+          </div>
+        </section>
+      </section>
+    </main>
+  </body>
+</html>

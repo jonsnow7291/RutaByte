@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>RutaByte | Iniciar Sesion</title>
+    <link rel="stylesheet" href="css/styles.css" />
+    <script src="js/auth.js" defer></script>
+  </head>
+  <body class="auth-page">
+    <main class="auth-shell">
+      <section class="auth-card" aria-labelledby="loginTitle">
+        <aside class="auth-aside">
+          <div>
+            <img src="assets/Logo/logo.png" alt="RutaByte" class="brand-logo" />
+            <h1>Acceso seguro al sistema</h1>
+            <p>
+              Inicia sesion para continuar con la gestion interna segun tu rol.
+            </p>
+          </div>
+
+          <div class="auth-highlight">
+            <strong>Autenticacion centralizada</strong>
+            <span>Token JWT, redireccion por rol y control de acceso por perfil.</span>
+          </div>
+        </aside>
+
+        <section class="auth-content">
+          <form id="loginForm" class="auth-form" novalidate>
+            <div>
+              <h2 id="loginTitle">Iniciar Sesion</h2>
+              <p>Ingresa tus credenciales para continuar.</p>
+            </div>
+
+            <div class="field-group">
+              <label for="correo">Correo electronico</label>
+              <input
+                id="correo"
+                name="correo"
+                type="email"
+                autocomplete="username"
+                inputmode="email"
+                placeholder="admin@rutabyte.com"
+                required
+              />
+            </div>
+
+            <div class="field-group">
+              <label for="contrasena">Contrasena</label>
+              <input
+                id="contrasena"
+                name="contrasena"
+                type="password"
+                autocomplete="current-password"
+                placeholder="Tu contrasena"
+                required
+              />
+            </div>
+
+            <p id="loginError" class="auth-error" role="alert" aria-live="polite"></p>
+
+            <button class="auth-submit" type="submit">Ingresar</button>
+
+            <p class="auth-footer">
+              Si aun no tienes acceso, solicita tus credenciales al administrador.
+            </p>
+            <a class="auth-recover-link" href="recuperar.html">Olvidaste tu contrasena?</a>
+          </form>
+        </section>
+      </section>
+    </main>
+  </body>
+</html>
