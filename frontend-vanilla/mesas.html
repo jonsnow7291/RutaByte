@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Gestion de Mesas</title>
+
+  <link rel="stylesheet" href="css/styles.css" />
+  <link rel="stylesheet" href="css/sedes.css" />
+  <link rel="stylesheet" href="css/usuarios.css" />
+
+  <script src="js/auth-guard.js" defer></script>
+  <script src="js/mesas.js" defer></script>
+</head>
+
+<body>
+  <main class="sedes-page">
+    <section class="sedes-shell">
+
+      <header class="sedes-header">
+        <div>
+          <span class="eyebrow">HU-A06</span>
+          <h1>Gestion de Mesas</h1>
+          <p>Administra mesas por sede.</p>
+        </div>
+
+        <div class="actions-row">
+          <button id="openModalBtn" class="btn btn-primary">
+            Nueva Mesa
+          </button>
+          <a class="btn btn-ghost" href="dashboard.html">Volver</a>
+        </div>
+      </header>
+
+      <!-- ALERTAS -->
+      <div id="alertSlot" class="alert-slot"></div>
+
+      <section class="content">
+        <table>
+          <thead>
+            <tr>
+              <th>Sede</th>
+              <th>Identificador</th>
+              <th>Estado</th>
+              <th>Activa</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="mesasTableBody"></tbody>
+        </table>
+      </section>
+
+    </section>
+  </main>
+
+  <!-- MODAL -->
+  <div id="mesaModal" class="modal" aria-hidden="true">
+    <div class="modal-card">
+
+      <div class="modal-header">
+        <h2>Crear Mesa</h2>
+        <button id="closeModalBtn" class="icon-btn" type="button">
+          &times;
+        </button>
+      </div>
+
+      <form id="mesaForm">
+        <div class="modal-body">
+
+          <div class="field">
+            <label for="sede_id">Sede</label>
+            <select id="sede_id" name="sede_id" required>
+              <option value="">Seleccionar sede</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="identificador">Número / Nombre de Mesa</label>
+            <input
+              id="identificador"
+              name="identificador"
+              type="text"
+              maxlength="50"
+              required
+              placeholder="Ej. Mesa 1"
+            />
+          </div>
+
+        </div>
+
+        <div class="modal-footer">
+          <button id="cancelModalBtn" class="btn btn-ghost" type="button">
+            Cancelar
+          </button>
+          <button class="btn btn-primary" type="submit">
+            Crear Mesa
+          </button>
+        </div>
+      </form>
+
+    </div>
+  </div>
+
+</body>
+</html>

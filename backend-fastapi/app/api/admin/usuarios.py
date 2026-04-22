@@ -10,7 +10,7 @@ from app.db.session import get_db
 from app.models.rol import Rol
 from app.models.sede import Sede
 from app.models.usuario import Usuario
-from app.schemas.usuario import UsuarioCreate, UsuarioResponse
+from app.schemas.usuario import UsuarioCreate, UsuarioResponse, UsuarioUpdate
 
 
 router = APIRouter(
@@ -57,6 +57,42 @@ def crear_usuario(payload: UsuarioCreate, db: Session = Depends(get_db)) -> Usua
 def listar_usuarios(db: Session = Depends(get_db)) -> list[Usuario]:
     stmt = select(Usuario).where(Usuario.activo.is_(True)).order_by(Usuario.nombre.asc())
     return list(db.scalars(stmt).all())
+
+
+@router.put("/{usuario_id}", response_model=UsuarioResponse)
+def actualizar_usuario(
+    usuario_id: int,
+    payload: UsuarioUpdate,
+    db: Session = Depends(get_db),
+) -> Usuario:
+    usuario = db.get(Usuario, usuario_id)
+    if usuario is None or not usuario.activo:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Usuario no encontrado")
+
+    provided_fields = payload.model_dump(exclude_unset=True)
+
+    if "rol_id" in provided_fields:
+        rol = db.get(Rol, payload.rol_id)
+        if rol is None or not rol.activo:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Rol no valido")
+        usuario.rol_id = payload.rol_id
+
+    if "sede_id" in provided_fields:
+        if payload.sede_id is not None:
+            sede = db.get(Sede, payload.sede_id)
+            if sede is None or not sede.activa:
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Sede no valida")
+        usuario.sede_id = payload.sede_id
+
+    if "nombre" in provided_fields:
+        usuario.nombre = payload.nombre
+
+    if "contrasena" in provided_fields and payload.contrasena is not None:
+        usuario.hash_contrasena = pwd_context.hash(payload.contrasena)
+
+    db.commit()
+    db.refresh(usuario)
+    return usuario
 
 
 @router.delete("/{usuario_id}")

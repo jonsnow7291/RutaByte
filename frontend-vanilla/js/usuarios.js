@@ -47,9 +47,15 @@ function escapeHtml(value) {
     .replaceAll("'", "&#39;");
 }
 
-function openModal() {
+let editingId = null;
+
+function openModal(editing = false) {
   modal.classList.add("is-open");
   modal.setAttribute("aria-hidden", "false");
+  if (!editing) {
+    editingId = null;
+    form.reset();
+  }
   document.getElementById("nombre").focus();
 }
 
@@ -57,6 +63,16 @@ function closeModal() {
   modal.classList.remove("is-open");
   modal.setAttribute("aria-hidden", "true");
   form.reset();
+  editingId = null;
+  form.correo.readOnly = false;
+  form.correo.parentElement.style.display = "";
+  form.contrasena.required = true;
+  form.contrasena.placeholder = "Minimo 6 caracteres";
+
+  const modalTitle = document.getElementById("modalTitle");
+  const modalEyebrow = modal.parentElement.querySelector(".eyebrow");
+  modalTitle.textContent = "Crear Usuario";
+  modalEyebrow.textContent = "Nuevo registro";
   openModalBtn.focus();
 }
 
@@ -70,9 +86,6 @@ async function parseResponse(response) {
 
 async function apiRequest(url, options = {}) {
   const token = getToken();
-  if (!token) {
-    throw new Error("No se encontro un JWT en el almacenamiento del navegador.");
-  }
 
   const headers = new Headers(options.headers || {});
   headers.set("Authorization", `Bearer ${token}`);
@@ -82,13 +95,19 @@ async function apiRequest(url, options = {}) {
   }
 
   const response = await fetch(url, { ...options, headers });
-  const payload = await parseResponse(response);
+  const payload = await response.json();
 
   if (!response.ok) {
-    const message =
-      (payload && typeof payload === "object" && (payload.detail || payload.message || payload.error)) ||
-      (typeof payload === "string" && payload.trim()) ||
-      `La API respondio con error HTTP ${response.status}.`;
+    console.error("ERROR BACKEND:", payload); // 🔥 CLAVE
+
+    let message = "Error en la solicitud";
+
+    if (Array.isArray(payload.detail)) {
+      message = payload.detail.map(e => e.msg).join(", ");
+    } else if (payload.detail) {
+      message = payload.detail;
+    }
+
     throw new Error(message);
   }
 
@@ -168,6 +187,14 @@ function renderUsuarios(usuarios) {
           <button
             class="table-action"
             type="button"
+            data-action="edit"
+            data-id="${escapeHtml(id)}"
+          >
+            Editar
+          </button>
+          <button
+            class="table-action"
+            type="button"
             data-action="deactivate"
             data-id="${escapeHtml(id)}"
             ${disabledAttr}
@@ -202,24 +229,43 @@ async function loadUsuarios() {
 
 async function createUsuario(event) {
   event.preventDefault();
-  if (!authToken) return;
 
   const nombre = form.nombre.value.trim();
-  const correo = form.correo.value.trim();
   const contrasena = form.contrasena.value;
   const rol_id = Number(form.rol_id.value);
   const sede_id = form.sede_id.value ? Number(form.sede_id.value) : null;
 
   try {
-    await apiRequest(USUARIOS_URL, {
-      method: "POST",
-      body: JSON.stringify({ nombre, correo, contrasena, rol_id, sede_id }),
-    });
-
-    showAlert("Usuario creado correctamente.", "success");
+    if (editingId) {
+      await apiRequest(`${USUARIOS_URL}/${editingId}`, {
+        method: "PUT",
+        body: JSON.stringify({
+          nombre,
+          contrasena: contrasena || null,
+          rol_id,
+          sede_id
+        }),
+      });
+      showAlert("Usuario actualizado correctamente.", "success");
+    } else {
+      const correo = form.correo.value.trim();
+      await apiRequest(USUARIOS_URL, {
+        method: "POST",
+        body: JSON.stringify({
+          nombre,
+          correo,
+          contrasena: contrasena,
+          rol_id,
+          sede_id
+        }),
+      });
+      showAlert("Usuario creado correctamente.", "success");
+    }
     closeModal();
     await loadUsuarios();
+
   } catch (error) {
+    console.error(error);
     showAlert(error.message);
   }
 }
@@ -237,11 +283,43 @@ async function deactivateUsuario(usuarioId) {
   }
 }
 
+async function editUsuario(usuarioId) {
+  await loadSedes();
+  const usuarios = await apiRequest(USUARIOS_URL);
+  const usuario = getList(usuarios).find((u) => u.id === usuarioId);
+  if (!usuario) {
+    showAlert("Usuario no encontrado");
+    return;
+  }
+  editingId = usuarioId;
+  form.nombre.value = usuario.nombre;
+  form.correo.value = usuario.correo;
+  form.correo.readOnly = true;
+  form.correo.parentElement.style.display = "none";
+  form.contrasena.placeholder = "Nueva contrasena (opcional)";
+  form.contrasena.required = false;
+  form.rol_id.value = usuario.rol_id || "";
+  form.sede_id.value = usuario.sede_id || "";
+
+  const modalTitle = document.getElementById("modalTitle");
+  const modalEyebrow = modal.parentElement.querySelector(".eyebrow");
+  modalTitle.textContent = "Editar Usuario";
+  modalEyebrow.textContent = "Editar registro";
+  openModal(true);
+}
+
 tableBody.addEventListener("click", (event) => {
   const button = event.target.closest('[data-action="deactivate"]');
-  if (!button) return;
-  const id = button.dataset.id;
-  if (id) void deactivateUsuario(id);
+  if (button) {
+    const id = button.dataset.id;
+    if (id) void deactivateUsuario(id);
+    return;
+  }
+  const editBtn = event.target.closest('[data-action="edit"]');
+  if (editBtn) {
+    const id = editBtn.dataset.id;
+    if (id) void editUsuario(Number(id));
+  }
 });
 
 openModalBtn.addEventListener("click", async () => {

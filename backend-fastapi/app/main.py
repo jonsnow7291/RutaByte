@@ -1,4 +1,5 @@
 from pathlib import Path
+from app.api.admin.mesas import router as mesas_admin_router
 
 from dotenv import load_dotenv
 from fastapi import FastAPI
@@ -32,6 +33,7 @@ app.include_router(sedes_admin_router)
 app.include_router(usuarios_admin_router)
 app.include_router(productos_admin_router)
 app.include_router(pedidos_mesero_router)
+app.include_router(mesas_admin_router)
 
 
 @app.get("/", tags=["root"])

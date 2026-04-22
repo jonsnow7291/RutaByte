@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Depends
+from typing import Annotated, Any
+
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -29,9 +31,23 @@ def listar_categorias_publico(db: Session = Depends(get_db)) -> list[Categoria]:
     return list(db.scalars(stmt).all())
 
 
-@router.get("/mesas", dependencies=[Depends(get_current_user)])
-def listar_mesas(db: Session = Depends(get_db)) -> list[dict]:
-    stmt = select(Mesa).where(Mesa.activa.is_(True)).order_by(Mesa.identificador_mesa.asc())
+@router.get("/mesas")
+def listar_mesas(
+    current_user: Annotated[dict[str, Any], Depends(get_current_user)],
+    db: Session = Depends(get_db),
+) -> list[dict]:
+    sede_id = current_user.get("sede_id")
+    if sede_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="El usuario no tiene una sede asignada",
+        )
+
+    stmt = (
+        select(Mesa)
+        .where(Mesa.activa.is_(True), Mesa.sede_id == sede_id)
+        .order_by(Mesa.identificador_mesa.asc())
+    )
     mesas = db.scalars(stmt).all()
     return [
         {"id": m.id, "sede_id": m.sede_id, "identificador_mesa": m.identificador_mesa, "estado": m.estado}

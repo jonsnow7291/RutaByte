@@ -13,6 +13,13 @@ class UsuarioCreate(BaseModel):
     sede_id: int | None = None
 
 
+class UsuarioUpdate(BaseModel):
+    nombre: str | None = Field(min_length=2, max_length=150, default=None)
+    contrasena: str | None = Field(min_length=6, max_length=128, default=None)
+    rol_id: int | None = None
+    sede_id: int | None = None
+
+
 class UsuarioResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
