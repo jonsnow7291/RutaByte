@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>RutaByte | Gestion de Mesas</title>
+    <link rel="stylesheet" href="css/styles.css" />
+    <link rel="stylesheet" href="css/sedes.css" />
+    <link rel="stylesheet" href="css/usuarios.css" />
+    <script src="js/auth-guard.js" defer></script>
+    <script src="js/mesas.js" defer></script>
+  </head>
+  <body>
+    <main class="sedes-page">
+      <section class="sedes-shell">
+        <header class="sedes-header">
+          <div>
+            <span class="eyebrow">CRUD MESAS</span>
+            <h1>Gestion de Mesas</h1>
+            <p>
+              Crea, edita y desactiva mesas para las sedes registradas.
+            </p>
+          </div>
+
+          <div class="actions-row">
+            <button id="openModalBtn" class="btn btn-primary" type="button">
+              Nueva Mesa
+            </button>
+            <a class="btn btn-ghost" href="dashboard.html">Volver</a>
+          </div>
+        </header>
+
+        <section class="content">
+          <div id="alertSlot" class="alert-slot" aria-live="polite"></div>
+
+          <div class="table-wrap">
+            <table aria-label="Listado de mesas">
+              <thead>
+                <tr>
+                    <th>Sede</th>
+                    <th>Identificador</th>
+                    <th>Estado</th>
+                    <th>Activo</th>
+                    <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="mesasTableBody"></tbody>
+            </table>
+          </div>
+        </section>
+      </section>
+    </main>
+
+    <div id="mesaModal" class="modal" aria-hidden="true">
+      <div class="modal-card modal-card--sm" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+        <div class="modal-header">
+          <div>
+            <span class="eyebrow">Nuevo registro</span>
+            <h2 id="modalTitle">Crear Mesa</h2>
+          </div>
+          <button id="closeModalBtn" class="icon-btn" type="button" aria-label="Cerrar modal">
+            &times;
+          </button>
+        </div>
+
+        <div class="field">
+            <label for="sede_id">Sede</label>
+            <select id="sede_id" name="sede_id" required>
+                <option value="">Seleccionar sede</option>
+            </select>
+        </div>
+
+        <form id="mesaForm">
+          <div class="modal-body">
+            <div class="field">
+              <label for="identificador_mesa">Numero o nombre de mesa</label>
+              <input
+                id="identificador_mesa"
+                name="identificador_mesa"
+                type="text"
+                maxlength="100"
+                required
+                placeholder="Ej. Mesa 1"
+              />
+            </div>
+
+            <div class="field">
+              <label for="estado">Estado</label>
+              <select id="estado" name="estado" required>
+                <option value="LIBRE">LIBRE</option>
+                <option value="OCUPADA">OCUPADA</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="modal-footer">
+            <button id="cancelModalBtn" class="btn btn-ghost" type="button">Cancelar</button>
+            <button class="btn btn-primary" type="submit">Guardar Mesa</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>RutaByte | Cobro de pedidos</title>
+    <link rel="stylesheet" href="css/styles.css" />
+    <link rel="stylesheet" href="css/pagos.css" />
+    <script src="js/auth-guard.js" defer></script>
+    <script src="js/pagos.js" defer></script>
+  </head>
+  <body>
+    <main class="pagos-page">
+      <section class="pagos-shell">
+        <header class="pagos-header">
+          <div>
+            <span class="eyebrow">HU-C01</span>
+            <h1>Cobro de pedidos</h1>
+            <p>Procesa pagos de pedidos entregados y registra el cierre de la venta.</p>
+          </div>
+
+          <div class="actions-row">
+            <button id="refreshPagosBtn" class="btn btn-ghost" type="button">Actualizar</button>
+            <a class="btn btn-ghost" href="dashboard.html">Volver</a>
+          </div>
+        </header>
+
+        <section class="content">
+          <div id="alertSlot" class="alert-slot" aria-live="polite"></div>
+
+          <section class="summary-grid">
+            <article class="summary-card">
+              <span class="summary-label">Rol</span>
+              <strong id="summaryRole">-</strong>
+            </article>
+
+            <article class="summary-card">
+              <span class="summary-label">Sede activa</span>
+              <strong id="summarySede">-</strong>
+            </article>
+
+            <article class="summary-card">
+              <span class="summary-label">Pedidos pendientes</span>
+              <strong id="summaryPendientes">0</strong>
+            </article>
+
+            <article class="summary-card">
+              <span class="summary-label">Total pendiente</span>
+              <strong id="summaryTotal">$0</strong>
+            </article>
+          </section>
+
+          <section class="table-section">
+            <h2>Pedidos listos para cobrar</h2>
+            <p class="section-copy">
+              Solo se muestran pedidos entregados que aun no tienen pago registrado.
+            </p>
+
+            <div class="table-wrap">
+              <table aria-label="Pedidos listos para cobrar">
+                <thead>
+                  <tr>
+                    <th>PEDIDO</th>
+                    <th>MESA</th>
+                    <th>ESTADO</th>
+                    <th>TOTAL</th>
+                    <th>ACCION</th>
+                  </tr>
+                </thead>
+                <tbody id="pagosTableBody"></tbody>
+              </table>
+            </div>
+          </section>
+
+          <section class="table-section">
+            <h2>Pagos recientes</h2>
+            <p class="section-copy">
+              Historial de cobros registrados en la sede seleccionada.
+            </p>
+
+            <div class="table-wrap">
+              <table aria-label="Pagos recientes">
+                <thead>
+                  <tr>
+                    <th>FECHA</th>
+                    <th>PEDIDO</th>
+                    <th>MESA</th>
+                    <th>METODO</th>
+                    <th>TOTAL</th>
+                    <th>DETALLE</th>
+                  </tr>
+                </thead>
+                <tbody id="pagosRecientesTableBody"></tbody>
+              </table>
+            </div>
+          </section>
+        </section>
+      </section>
+    </main>
+
+    <div id="pagoModal" class="modal" aria-hidden="true">
+      <div class="modal-card pago-modal-card" role="dialog" aria-modal="true" aria-labelledby="pagoModalTitle">
+        <div class="modal-header">
+          <div>
+            <span class="eyebrow">PAGO</span>
+            <h2 id="pagoModalTitle">Procesar pago</h2>
+            <p>Selecciona metodo y confirma el cobro.</p>
+          </div>
+
+          <button id="closePagoModalBtn" class="icon-btn" type="button" aria-label="Cerrar modal">
+            &times;
+          </button>
+        </div>
+
+        <form id="pagoForm">
+          <div class="modal-body">
+            <div class="payment-total-box">
+              <span>Total a cobrar</span>
+              <strong id="pagoTotal">$0</strong>
+            </div>
+
+            <div class="field">
+              <label for="metodo_pago">Metodo de pago</label>
+              <select id="metodo_pago" name="metodo_pago" required>
+                <option value="EFECTIVO">Efectivo</option>
+                <option value="TARJETA">Tarjeta</option>
+                <option value="MIXTO">Mixto</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="referencia_pago">Referencia</label>
+              <input
+                id="referencia_pago"
+                name="referencia_pago"
+                type="text"
+                maxlength="150"
+                placeholder="Opcional"
+              />
+            </div>
+
+            <div class="field">
+              <label for="monto_efectivo">Monto efectivo</label>
+              <input
+                id="monto_efectivo"
+                name="monto_efectivo"
+                type="number"
+                min="0"
+                step="0.01"
+                placeholder="Solo si aplica"
+              />
+            </div>
+          </div>
+
+          <div class="modal-footer">
+            <button id="cancelPagoModalBtn" class="btn btn-ghost" type="button">Cancelar</button>
+            <button class="btn btn-primary" type="submit">Confirmar pago</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </body>
+</html>

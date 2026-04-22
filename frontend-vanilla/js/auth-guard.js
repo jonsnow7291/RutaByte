@@ -1,6 +1,6 @@
 const AUTH_TOKEN_KEYS = ["access_token", "token", "jwt", "authToken"];
-const AUTH_REDIRECT_URL = "index.html";
-const INACTIVITY_TIMEOUT_MS = 60 * 1000; // 1 minuto
+const AUTH_REDIRECT_URL = "/frontend-vanilla/index.html";
+const INACTIVITY_TIMEOUT_MS = 30 * 60 * 1000;
 
 let inactivityTimer = null;
 
@@ -11,19 +11,17 @@ function getStoredAuthToken() {
       return token.replace(/^Bearer\s+/i, "");
     }
   }
-
   return null;
 }
 
 function logout() {
   sessionStorage.clear();
-  window.location.replace(AUTH_REDIRECT_URL);
+  window.location.href = AUTH_REDIRECT_URL;
 }
 
 function resetInactivityTimer() {
   clearTimeout(inactivityTimer);
   inactivityTimer = setTimeout(() => {
-    alert("Tu sesion ha expirado por inactividad.");
     logout();
   }, INACTIVITY_TIMEOUT_MS);
 }
@@ -36,8 +34,13 @@ function startInactivityWatch() {
 
 function requireAuth() {
   const token = getStoredAuthToken();
+
+  console.log("requireAuth token:", token);
+  console.log("session access_token:", sessionStorage.getItem("access_token"));
+  console.log("current url:", window.location.href);
+
   if (!token) {
-    window.location.replace(AUTH_REDIRECT_URL);
+    window.location.href = AUTH_REDIRECT_URL;
     return null;
   }
 
@@ -48,4 +51,5 @@ function requireAuth() {
 window.RutaByteAuthGuard = {
   getStoredAuthToken,
   requireAuth,
+  logout,
 };

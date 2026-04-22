@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>RutaByte | Inventario por Sede</title>
+    <link rel="stylesheet" href="css/styles.css" />
+    <link rel="stylesheet" href="css/sedes.css" />
+    <link rel="stylesheet" href="css/usuarios.css" />
+    <link rel="stylesheet" href="css/inventario.css" />
+    <script src="js/auth-guard.js" defer></script>
+    <script src="js/inventario.js" defer></script>
+  </head>
+  <body>
+    <main class="sedes-page inventory-page">
+      <section class="sedes-shell">
+        <header class="sedes-header">
+          <div>
+            <span class="eyebrow">HU-C02</span>
+            <h1>Inventario de la sede</h1>
+            <p>
+              Consulta existencias, registra entradas de productos y revisa los movimientos
+              del inventario segun tu sede y rol.
+            </p>
+          </div>
+          <div class="actions-row">
+            <button id="openEntradaModalBtn" class="btn btn-primary" type="button">
+              Registrar entrada
+            </button>
+            <button id="refreshInventarioBtn" class="btn btn-ghost" type="button">
+              Actualizar
+            </button>
+            <a class="btn btn-ghost" href="dashboard.html">Volver</a>
+          </div>
+        </header>
+
+        <section class="content inventory-layout">
+          <div id="alertSlot" class="alert-slot" aria-live="polite"></div>
+
+          <section class="inventory-summary" aria-label="Resumen de inventario">
+            <article class="summary-card">
+              <span class="summary-label">Rol</span>
+              <strong id="summaryRole">-</strong>
+            </article>
+            <article class="summary-card">
+              <span class="summary-label">Sede activa</span>
+              <strong id="summarySede">-</strong>
+            </article>
+            <article class="summary-card">
+              <span class="summary-label">Productos con stock bajo</span>
+              <strong id="summaryCriticos">0</strong>
+            </article>
+            <article class="summary-card">
+              <span class="summary-label">Movimientos cargados</span>
+              <strong id="summaryMovimientos">0</strong>
+            </article>
+          </section>
+
+          <section class="inventory-filters card-surface">
+            <div class="filters-grid">
+              <div class="field">
+                <label for="filterSede">Sede</label>
+                <select id="filterSede" name="filterSede">
+                  <option value="">Mi sede</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="filterTexto">Buscar producto</label>
+                <input id="filterTexto" name="filterTexto" type="search" placeholder="Nombre o codigo" />
+              </div>
+              <div class="field">
+                <label for="filterCritico">Estado de stock</label>
+                <select id="filterCritico" name="filterCritico">
+                  <option value="">Todos</option>
+                  <option value="critico">Solo criticos</option>
+                  <option value="normal">Solo normales</option>
+                </select>
+              </div>
+            </div>
+          </section>
+
+          <section class="card-surface">
+            <div class="section-heading">
+              <div>
+                <h2>Existencias por producto</h2>
+                <p>Inventario disponible para la sede seleccionada.</p>
+              </div>
+            </div>
+            <div class="table-wrap">
+              <table aria-label="Listado de inventario">
+                <thead>
+                  <tr>
+                    <th>Codigo</th>
+                    <th>Producto</th>
+                    <th>Stock</th>
+                    <th>Umbral</th>
+                    <th>Estado</th>
+                    <th>Actualizado</th>
+                  </tr>
+                </thead>
+                <tbody id="inventarioTableBody"></tbody>
+              </table>
+            </div>
+          </section>
+
+          <section class="card-surface">
+            <div class="section-heading">
+              <div>
+                <h2>Movimientos recientes</h2>
+                <p>Entradas y salidas registradas en la sede.</p>
+              </div>
+            </div>
+            <div class="table-wrap">
+              <table aria-label="Movimientos de inventario">
+                <thead>
+                  <tr>
+                    <th>Fecha</th>
+                    <th>Producto</th>
+                    <th>Tipo</th>
+                    <th>Cantidad</th>
+                    <th>Usuario</th>
+                    <th>Detalle</th>
+                  </tr>
+                </thead>
+                <tbody id="movimientosTableBody"></tbody>
+              </table>
+            </div>
+          </section>
+        </section>
+      </section>
+    </main>
+
+    <div id="entradaModal" class="modal" aria-hidden="true">
+      <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="entradaModalTitle">
+        <div class="modal-header">
+          <div>
+            <span class="eyebrow">Entrada de inventario</span>
+            <h2 id="entradaModalTitle">Registrar llegada de productos</h2>
+          </div>
+          <button id="closeEntradaModalBtn" class="icon-btn" type="button" aria-label="Cerrar modal">
+            &times;
+          </button>
+        </div>
+
+        <form id="entradaForm">
+          <div class="modal-body">
+            <div class="field">
+              <label for="entradaSede">Sede</label>
+              <select id="entradaSede" name="sede_id"></select>
+            </div>
+            <div class="field">
+              <label for="entradaProducto">Producto</label>
+              <select id="entradaProducto" name="producto_id" required>
+                <option value="">Seleccionar producto</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="entradaCantidad">Cantidad</label>
+              <input id="entradaCantidad" name="cantidad" type="number" min="1" step="1" required placeholder="Ej. 12" />
+            </div>
+            <div class="field">
+              <label for="entradaUmbral">Umbral critico</label>
+              <input id="entradaUmbral" name="umbral" type="number" min="0" step="1" placeholder="Ej. 5" />
+            </div>
+            <div class="field field--full">
+              <label for="entradaMotivo">Detalle</label>
+              <textarea id="entradaMotivo" name="motivo" rows="3" maxlength="200" placeholder="Ej. Compra semanal o ajuste de ingreso"></textarea>
+            </div>
+          </div>
+
+          <div class="modal-footer">
+            <button id="cancelEntradaModalBtn" class="btn btn-ghost" type="button">Cancelar</button>
+            <button class="btn btn-primary" type="submit">Guardar entrada</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </body>
+</html>

@@ -11,6 +11,8 @@
   <body class="dashboard-page">
     <main class="dashboard-shell">
       <section class="dashboard-card" aria-labelledby="dashboardTitle">
+
+        <!-- SIDEBAR -->
         <aside class="dashboard-sidebar">
           <div class="dashboard-brand">
             <img src="assets/Logo/logo.png" alt="RutaByte" class="brand-logo" />
@@ -33,16 +35,24 @@
           </div>
         </aside>
 
+        <!-- MAIN -->
         <section class="dashboard-main">
+
+          <!-- TOPBAR -->
           <div class="dashboard-topbar">
             <div>
               <h2>Modulos disponibles</h2>
               <p>Selecciona una vista para continuar.</p>
             </div>
-            <a id="logoutBtn" class="btn btn-ghost logout-link" href="index.html">Cerrar sesion</a>
+            <a id="logoutBtn" class="btn btn-ghost logout-link" href="index.html">
+              Cerrar sesion
+            </a>
           </div>
 
+          <!-- GRID -->
           <div class="dashboard-grid">
+
+            <!-- ADMIN -->
             <article class="dashboard-tile" id="adminTile">
               <span class="eyebrow">Administrador</span>
               <h3>Gestion de Sedes</h3>
@@ -64,19 +74,70 @@
               <a class="primary-link" href="productos.html">Abrir Productos</a>
             </article>
 
+
+            <article class="dashboard-tile" id="adminMesasTile">
+              <span class="eyebrow">Administrador</span>
+              <h3>Gestion de Mesas</h3>
+              <p>Administra las mesas del sistema.</p>
+              <a class="primary-link" href="mesas.html">Abrir Mesas</a>
+            </article>
+
+            <!-- CAJERO -->
             <article class="dashboard-tile">
               <span class="eyebrow">Cajero</span>
               <h3>Panel de Caja</h3>
               <p>Modulo base preparado para operaciones de caja.</p>
-              <a class="btn btn-ghost" href="#" aria-disabled="true">En construccion</a>
+              <a class="btn btn-ghost" href="#" aria-disabled="true">
+                En construccion
+              </a>
             </article>
 
+            <article class="dashboard-tile" id="cajeroInventarioTile">
+              <span class="eyebrow">Cajero / Admin</span>
+              <h3>Inventario de la sede</h3>
+              <p>
+                Consulta existencias, registra entradas de productos y revisa
+                movimientos del inventario.
+              </p>
+              <a class="primary-link" href="inventario.html">
+                Abrir Inventario
+              </a>
+            </article>
+
+            <!-- PAGOS -->
+            <article class="dashboard-tile" id="cajeroPagosTile">
+              <span class="eyebrow">Cajero / Admin</span>
+              <h3>Cobro de pedidos</h3>
+              <p>
+                Procesa pagos en efectivo, tarjeta o mixto y cierra la venta.
+              </p>
+              <a class="primary-link" href="pagos.html">Abrir Pagos</a>
+            </article>
+
+            <!-- REPORTES -->
+            <article class="dashboard-tile" id="reportesTile">
+              <span class="eyebrow">Cajero / Admin</span>
+              <h3>Reporte de ventas</h3>
+              <p>
+                Consulta ventas por fecha y exporta la informacion en CSV.
+              </p>
+              <a class="primary-link" href="reportes.html">
+                Abrir Reportes
+              </a>
+            </article>
+
+            <!-- MESERO -->
             <article class="dashboard-tile" id="meseroTile">
               <span class="eyebrow">Mesero</span>
               <h3>Tomar Pedidos</h3>
-              <p>Selecciona una mesa, agrega productos y confirma pedidos.</p>
-              <a class="primary-link" href="pedidos.html">Abrir Pedidos</a>
+              <p>
+                Selecciona una mesa, agrega productos y confirma pedidos.
+              </p>
+              <a class="primary-link" href="pedidos.html">
+                Abrir Pedidos
+              </a>
             </article>
+
           </div>
         </section>
       </section>

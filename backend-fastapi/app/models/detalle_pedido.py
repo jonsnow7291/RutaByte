@@ -21,6 +21,7 @@ class DetallePedido(Base):
     producto_id: Mapped[int] = mapped_column(ForeignKey("PRODUCTOS.id"), nullable=False)
     cantidad: Mapped[int] = mapped_column(Integer, nullable=False)
     precio_unitario: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
+    costo_unitario: Mapped[Decimal] = mapped_column(Numeric(10, 2), default=0, nullable=False)
     notas: Mapped[str | None] = mapped_column(String(150), nullable=True)
 
     pedido: Mapped["Pedido"] = relationship(back_populates="detalles")

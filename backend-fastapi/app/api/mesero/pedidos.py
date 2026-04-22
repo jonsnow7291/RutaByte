@@ -11,6 +11,7 @@ from app.models.mesa import Mesa
 from app.models.pedido import Pedido
 from app.models.producto import Producto
 from app.schemas.pedido import PedidoCreate, PedidoListResponse, PedidoResponse
+from app.services.inventario_service import descontar_inventario
 
 
 router = APIRouter(
@@ -29,7 +30,7 @@ def crear_pedido(
     if mesa is None or not mesa.activa:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Mesa no valida")
 
-    usuario_id = current_user.get("usuario_id")
+    usuario_id = int(current_user.get("usuario_id"))
 
     pedido = Pedido(
         mesa_id=payload.mesa_id,
@@ -37,28 +38,47 @@ def crear_pedido(
         estado="EN_PREPARACION",
     )
 
-    for item in payload.items:
-        producto = db.get(Producto, item.producto_id)
-        if producto is None or not producto.activo:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Producto con id {item.producto_id} no valido",
-            )
+    try:
+        for item in payload.items:
+            producto = db.get(Producto, item.producto_id)
+            if producto is None or not producto.activo:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Producto con id {item.producto_id} no valido",
+                )
 
-        pedido.detalles.append(
-            DetallePedido(
+            descontar_inventario(
+                db=db,
+                sede_id=mesa.sede_id,
                 producto_id=item.producto_id,
                 cantidad=item.cantidad,
-                precio_unitario=producto.precio,
-                notas=item.notas,
+                usuario_id=usuario_id,
             )
-        )
 
-    mesa.estado = "OCUPADA"
-    db.add(pedido)
-    db.commit()
-    db.refresh(pedido)
-    return pedido
+            pedido.detalles.append(
+                DetallePedido(
+                    producto_id=item.producto_id,
+                    cantidad=item.cantidad,
+                    precio_unitario=producto.precio,
+                    costo_unitario=producto.costo_compra,
+                    notas=item.notas,
+                )
+            )
+
+        mesa.estado = "OCUPADA"
+        db.add(pedido)
+        db.commit()
+        db.refresh(pedido)
+        return pedido
+    except HTTPException:
+        db.rollback()
+        raise
+    except ValueError as exc:
+        db.rollback()
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    except Exception as exc:
+        db.rollback()
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Error al crear el pedido") from exc
 
 
 @router.get("", response_model=list[PedidoListResponse])
@@ -66,7 +86,7 @@ def listar_pedidos(
     current_user: dict = Depends(get_current_mesero),
     db: Session = Depends(get_db),
 ) -> list[Pedido]:
-    usuario_id = current_user.get("usuario_id")
+    usuario_id = int(current_user.get("usuario_id"))
     stmt = (
         select(Pedido)
         .where(Pedido.usuario_id == usuario_id)
@@ -81,11 +101,13 @@ def obtener_pedido(
     current_user: dict = Depends(get_current_mesero),
     db: Session = Depends(get_db),
 ) -> Pedido:
-    stmt = (
-        select(Pedido)
-        .options(selectinload(Pedido.detalles))
-        .where(Pedido.id == pedido_id)
-    )
+    role_id = int(current_user.get("rol_id", current_user.get("role_id")))
+    usuario_id = int(current_user.get("usuario_id"))
+
+    stmt = select(Pedido).options(selectinload(Pedido.detalles)).where(Pedido.id == pedido_id)
+    if role_id != 1:
+        stmt = stmt.where(Pedido.usuario_id == usuario_id)
+
     pedido = db.scalar(stmt)
     if pedido is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Pedido no encontrado")
@@ -98,9 +120,14 @@ def cambiar_estado(
     current_user: dict = Depends(get_current_mesero),
     db: Session = Depends(get_db),
 ) -> dict[str, str | int]:
+    role_id = int(current_user.get("rol_id", current_user.get("role_id")))
+    usuario_id = int(current_user.get("usuario_id"))
+
     pedido = db.get(Pedido, pedido_id)
     if pedido is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Pedido no encontrado")
+    if role_id != 1 and pedido.usuario_id != usuario_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="No puede modificar este pedido")
 
     transiciones = {
         "EN_PREPARACION": "LISTO",
@@ -115,11 +142,5 @@ def cambiar_estado(
         )
 
     pedido.estado = siguiente
-
-    if siguiente == "ENTREGADO":
-        mesa = db.get(Mesa, pedido.mesa_id)
-        if mesa:
-            mesa.estado = "LIBRE"
-
     db.commit()
     return {"message": f"Pedido actualizado a {siguiente}", "id": pedido.id, "estado": siguiente}

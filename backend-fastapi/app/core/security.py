@@ -16,6 +16,8 @@ ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
 TOKEN_ALGORITHM = "RS256"
 ACCESS_TOKEN_EXPIRE_HOURS = int(os.getenv("JWT_ACCESS_TOKEN_EXPIRE_HOURS", "8"))
 ADMIN_ROLE_ID = int(os.getenv("ADMIN_ROLE_ID", "1"))
+CAJERO_ROLE_ID = int(os.getenv("CAJERO_ROLE_ID", "2"))
+MESERO_ROLE_ID = int(os.getenv("MESERO_ROLE_ID", "3"))
 
 
 @lru_cache(maxsize=1)

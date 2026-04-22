@@ -3,7 +3,7 @@ const API_BASE_URL =
   document.body?.dataset.apiBaseUrl ||
   "http://127.0.0.1:8000";
 const PRODUCTOS_URL = `${API_BASE_URL.replace(/\/$/, "")}/admin/productos`;
-const CATEGORIAS_URL = `${PRODUCTOS_URL}/categorias`;
+const CATEGORIAS_URL = `${API_BASE_URL.replace(/\/$/, "")}/admin/productos/categorias`;
 
 const alertSlot = document.getElementById("alertSlot");
 const tableBody = document.getElementById("productosTableBody");
@@ -24,6 +24,8 @@ const cancelCatModalBtn = document.getElementById("cancelCatModalBtn");
 const authToken = window.RutaByteAuthGuard?.requireAuth?.();
 
 let categoriasCache = [];
+let currentProductos = [];
+let editingId = null;
 
 function getToken() {
   return authToken;
@@ -63,6 +65,11 @@ function closeModal(modal) {
   modal.setAttribute("aria-hidden", "true");
   const form = modal.querySelector("form");
   if (form) form.reset();
+
+  if (modal === productoModal) {
+    editingId = null;
+    document.getElementById("modalTitle").textContent = "Crear Producto";
+  }
 }
 
 async function parseResponse(response) {
@@ -185,6 +192,9 @@ function renderProductos(productos) {
         <td class="desc-cell">${desc}</td>
         <td><span class="${estadoClass}">${estadoText}</span></td>
         <td>
+          <button class="table-action" type="button" data-action="edit" data-id="${escapeHtml(id)}">
+            Editar
+          </button>
           <button class="table-action" type="button" data-action="deactivate" data-id="${escapeHtml(id)}" ${disabledAttr}>
             Desactivar
           </button>
@@ -203,7 +213,9 @@ async function loadProductos() {
   try {
     tableBody.innerHTML = `<tr><td class="empty-state" colspan="6">Cargando productos...</td></tr>`;
     const payload = await apiRequest(PRODUCTOS_URL);
-    renderProductos(getList(payload));
+    const lista = getList(payload);
+    currentProductos = lista;
+    renderProductos(lista);
   } catch (error) {
     renderEmptyState();
     showAlert(error.message);
@@ -220,12 +232,24 @@ async function createProducto(event) {
   const descripcion = productoForm.descripcion.value.trim() || null;
   const url_imagen = productoForm.url_imagen.value.trim() || null;
 
+  const payload = { nombre, categoria_id, precio, descripcion, url_imagen };
+
   try {
-    await apiRequest(PRODUCTOS_URL, {
-      method: "POST",
-      body: JSON.stringify({ nombre, categoria_id, precio, descripcion, url_imagen }),
-    });
-    showAlert("Producto creado correctamente.", "success");
+    if (editingId) {
+      await apiRequest(`${PRODUCTOS_URL}/${editingId}`, {
+        method: "PUT",
+        body: JSON.stringify(payload),
+      });
+      showAlert("Producto actualizado correctamente.", "success");
+    } else {
+      await apiRequest(PRODUCTOS_URL, {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
+      showAlert("Producto creado correctamente.", "success");
+    }
+
+    editingId = null;
     closeModal(productoModal);
     await loadProductos();
   } catch (error) {
@@ -248,14 +272,44 @@ async function deactivateProducto(productoId) {
 
 // ── Eventos ────────────────────────────────────────────────
 
-tableBody.addEventListener("click", (event) => {
-  const button = event.target.closest('[data-action="deactivate"]');
+tableBody.addEventListener("click", async (event) => {
+  const button = event.target.closest("[data-action]");
   if (!button) return;
+
   const id = button.dataset.id;
-  if (id) void deactivateProducto(id);
+  if (!id) return;
+
+  if (button.dataset.action === "deactivate") {
+    void deactivateProducto(id);
+    return;
+  }
+
+  if (button.dataset.action === "edit") {
+    await loadCategorias();
+
+    const producto = currentProductos.find((p) => String(p.id ?? p.producto_id) === String(id));
+    if (!producto) {
+      showAlert("No se pudo cargar el producto para editar.");
+      return;
+    }
+
+    editingId = id;
+
+    document.getElementById("modalTitle").textContent = "Editar Producto";
+    productoForm.nombre.value = producto.nombre || "";
+    productoForm.categoria_id.value = producto.categoria_id || "";
+    productoForm.precio.value = producto.precio ?? "";
+    productoForm.descripcion.value = producto.descripcion || "";
+    productoForm.url_imagen.value = producto.url_imagen || "";
+
+    openModal(productoModal, "nombre");
+  }
 });
 
 openModalBtn.addEventListener("click", async () => {
+  editingId = null;
+  productoForm.reset();
+  document.getElementById("modalTitle").textContent = "Crear Producto";
   await loadCategorias();
   openModal(productoModal, "nombre");
 });

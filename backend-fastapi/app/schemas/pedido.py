@@ -24,6 +24,7 @@ class DetalleItemResponse(BaseModel):
     producto_id: int
     cantidad: int
     precio_unitario: Decimal
+    costo_unitario: Decimal
     notas: str | None
 
 

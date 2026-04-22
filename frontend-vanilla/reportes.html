@@ -1,0 +1,105 @@
+
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>RutaByte | Reporte de Ventas</title>
+    <link rel="stylesheet" href="css/styles.css" />
+    <link rel="stylesheet" href="css/sedes.css" />
+    <link rel="stylesheet" href="css/usuarios.css" />
+    <link rel="stylesheet" href="css/reportes.css" />
+    <script src="js/auth-guard.js" defer></script>
+    <script src="js/reportes.js" defer></script>
+  </head>
+  <body>
+    <main class="sedes-page reports-page">
+      <section class="sedes-shell">
+        <header class="sedes-header">
+          <div>
+            <span class="eyebrow">Reporte</span>
+            <h1>Ventas por fecha</h1>
+            <p>Consulta ventas filtradas por fecha y exporta el resultado en CSV.</p>
+          </div>
+          <div class="actions-row">
+            <button id="runReportBtn" class="btn btn-primary" type="button">Consultar</button>
+            <button id="exportCsvBtn" class="btn btn-ghost" type="button">Exportar CSV</button>
+            <a class="btn btn-ghost" href="dashboard.html">Volver</a>
+          </div>
+        </header>
+
+        <section class="content reports-layout">
+          <div id="alertSlot" class="alert-slot" aria-live="polite"></div>
+
+          <section class="inventory-summary" aria-label="Resumen del reporte">
+            <article class="summary-card">
+              <span class="summary-label">Filas</span>
+              <strong id="summaryFilas">0</strong>
+            </article>
+            <article class="summary-card">
+              <span class="summary-label">Venta total</span>
+              <strong id="summaryVenta">$0</strong>
+            </article>
+            <article class="summary-card">
+              <span class="summary-label">Costo total</span>
+              <strong id="summaryCosto">$0</strong>
+            </article>
+            <article class="summary-card">
+              <span class="summary-label">Ganancia</span>
+              <strong id="summaryGanancia">$0</strong>
+            </article>
+          </section>
+
+          <section class="card-surface">
+            <div class="filters-grid">
+              <div class="field">
+                <label for="fechaInicio">Fecha inicio</label>
+                <input id="fechaInicio" type="datetime-local" />
+              </div>
+              <div class="field">
+                <label for="fechaFin">Fecha fin</label>
+                <input id="fechaFin" type="datetime-local" />
+              </div>
+              <div class="field">
+                <label for="reporteSede">Sede</label>
+                <select id="reporteSede">
+                  <option value="">Mi sede / Todas</option>
+                </select>
+              </div>
+            </div>
+          </section>
+
+          <section class="card-surface">
+            <div class="section-heading">
+              <div>
+                <h2>Resultado</h2>
+                <p>La fecha usada corresponde al momento del pago.</p>
+              </div>
+            </div>
+            <div class="table-wrap">
+              <table aria-label="Reporte de ventas">
+                <thead>
+                  <tr>
+                    <th>Fecha</th>
+                    <th>Sede</th>
+                    <th>Codigo</th>
+                    <th>Producto</th>
+                    <th>Unidades</th>
+                    <th>Compra</th>
+                    <th>Venta</th>
+                    <th>Total venta</th>
+                    <th>Total costo</th>
+                    <th>Ganancia</th>
+                  </tr>
+                </thead>
+                <tbody id="reportesTableBody">
+                  <tr><td colspan="10">Selecciona un rango y consulta el reporte.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </section>
+      </section>
+    </main>
+  </body>
+</html>
