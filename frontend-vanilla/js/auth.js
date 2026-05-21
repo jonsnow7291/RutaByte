@@ -21,6 +21,37 @@ document.addEventListener("DOMContentLoaded", () => {
     loginError.textContent = "";
   }
 
+  function decodeBase64Url(segment) {
+    const normalized = segment.replace(/-/g, "+").replace(/_/g, "/");
+    const padded = normalized.padEnd(
+      normalized.length + ((4 - (normalized.length % 4 || 4)) % 4),
+      "="
+    );
+    const binary = window.atob(padded);
+    const utf8 = Array.from(binary, (character) =>
+      `%${character.charCodeAt(0).toString(16).padStart(2, "0")}`
+    ).join("");
+
+    return decodeURIComponent(utf8);
+  }
+
+  function decodeJwtPayload(token) {
+    const parts = token.split(".");
+    if (parts.length !== 3) {
+      throw new Error("El token recibido no tiene un formato valido.");
+    }
+    return JSON.parse(decodeBase64Url(parts[1]));
+  }
+
+  function getRedirectPath(rolId) {
+    const redirects = {
+      1: "dashboard.html",
+      2: "dashboard.html",
+      3: "dashboard.html",
+    };
+    return redirects[Number(rolId)] ?? "dashboard.html";
+  }
+
   async function login(event) {
     event.preventDefault();
 
@@ -71,16 +102,35 @@ document.addEventListener("DOMContentLoaded", () => {
 
       sessionStorage.setItem("access_token", token);
       sessionStorage.setItem("token_type", payload.token_type || "bearer");
-      sessionStorage.setItem("correo", correo);
-      sessionStorage.setItem("rol_id", "1");
-      sessionStorage.setItem("role_id", "1");
+
+      const jwtPayload = decodeJwtPayload(token);
+
+      const rolId = Number(
+        jwtPayload.rol_id ??
+        jwtPayload.role_id ??
+        payload.rol_id ??
+        payload.role_id
+      );
+
+      sessionStorage.setItem(
+        "correo",
+        String(jwtPayload.correo ?? jwtPayload.sub ?? correo)
+      );
+
+      if (!Number.isNaN(rolId)) {
+        sessionStorage.setItem("rol_id", String(rolId));
+        sessionStorage.setItem("role_id", String(rolId));
+      }
+
+      if (jwtPayload.sede_id !== undefined && jwtPayload.sede_id !== null) {
+        sessionStorage.setItem("sede_id", String(jwtPayload.sede_id));
+      }
 
       loginCompleted = true;
-
       submitButton.disabled = true;
       submitButton.textContent = "Redirigiendo...";
 
-      window.location.replace("/frontend-vanilla/dashboard.html");
+      window.location.replace(getRedirectPath(rolId));
     } catch (error) {
       console.error("Error login:", error);
       showError(error.message || "Error al iniciar sesion.");

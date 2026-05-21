@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 
 from app.models.inventario import Inventario
 from app.models.movimiento_inventario import MovimientoInventario
+from app.models.producto import Producto
 
 
 def obtener_inventario(db: Session, sede_id: int, producto_id: int) -> Inventario | None:
@@ -22,12 +23,15 @@ def registrar_entrada_inventario(
     umbral_minimo: int | None = None,
 ) -> Inventario:
     inventario = obtener_inventario(db, sede_id=sede_id, producto_id=producto_id)
+    producto = db.get(Producto, producto_id)
+    umbral_producto = int(getattr(producto, "umbral_minimo", 5) or 5)
+
     if inventario is None:
-        inventario = Inventario(sede_id=sede_id, producto_id=producto_id, stock=0, umbral_minimo=umbral_minimo or 5)
+        inventario = Inventario(sede_id=sede_id, producto_id=producto_id, stock=0, umbral_minimo=umbral_producto)
         db.add(inventario)
         db.flush()
-    elif umbral_minimo is not None:
-        inventario.umbral_minimo = umbral_minimo
+    else:
+        inventario.umbral_minimo = umbral_producto
 
     stock_anterior = inventario.stock
     inventario.stock += cantidad

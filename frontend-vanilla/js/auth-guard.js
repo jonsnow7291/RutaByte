@@ -1,5 +1,5 @@
 const AUTH_TOKEN_KEYS = ["access_token", "token", "jwt", "authToken"];
-const AUTH_REDIRECT_URL = "/frontend-vanilla/index.html";
+const AUTH_REDIRECT_URL = "index.html";
 const INACTIVITY_TIMEOUT_MS = 30 * 60 * 1000;
 
 let inactivityTimer = null;
@@ -35,9 +35,6 @@ function startInactivityWatch() {
 function requireAuth() {
   const token = getStoredAuthToken();
 
-  console.log("requireAuth token:", token);
-  console.log("session access_token:", sessionStorage.getItem("access_token"));
-  console.log("current url:", window.location.href);
 
   if (!token) {
     window.location.href = AUTH_REDIRECT_URL;

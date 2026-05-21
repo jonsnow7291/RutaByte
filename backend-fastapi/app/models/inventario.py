@@ -24,3 +24,19 @@ class Inventario(Base):
     sede = relationship("Sede")
     producto = relationship("Producto")
     movimientos = relationship("MovimientoInventario", back_populates="inventario", cascade="all, delete-orphan")
+    @property
+    def producto_nombre(self) -> str | None:
+        return self.producto.nombre if self.producto else None
+
+    @property
+    def producto_codigo(self) -> str | None:
+        return self.producto.codigo if self.producto else None
+
+    @property
+    def costo_compra(self):
+        return self.producto.costo_compra if self.producto else 0
+
+    @property
+    def precio_venta(self):
+        return self.producto.precio if self.producto else 0
+

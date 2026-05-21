@@ -2,7 +2,9 @@
 const API_BASE_URL = window.RUTABYTE_API_BASE_URL || document.body?.dataset.apiBaseUrl || "http://127.0.0.1:8000";
 const REPORTES_URL = `${API_BASE_URL.replace(/\/$/, "")}/reportes/ventas`;
 const EXPORT_CSV_URL = `${API_BASE_URL.replace(/\/$/, "")}/reportes/ventas/export/csv`;
+const GRAFICAS_URL = `${API_BASE_URL.replace(/\/$/, "")}/reportes/ventas-graficas`;
 const SEDES_URL = `${API_BASE_URL.replace(/\/$/, "")}/api/sedes`;
+const ADMIN_SEDES_URL = `${API_BASE_URL.replace(/\/$/, "")}/admin/sedes`;
 const authToken = window.RutaByteAuthGuard?.requireAuth?.();
 
 const alertSlot = document.getElementById("alertSlot");
@@ -17,6 +19,13 @@ const summaryVenta = document.getElementById("summaryVenta");
 const summaryCosto = document.getElementById("summaryCosto");
 const summaryGanancia = document.getElementById("summaryGanancia");
 
+const ventasDiaChart = document.getElementById("ventasDiaChart");
+const productosTopChart = document.getElementById("productosTopChart");
+const gananciaProductoChart = document.getElementById("gananciaProductoChart");
+const ventasSedeChart = document.getElementById("ventasSedeChart");
+const metodosPagoChart = document.getElementById("metodosPagoChart");
+const stockBajoChart = document.getElementById("stockBajoChart");
+
 let sedesCache = [];
 let reportesCache = [];
 
@@ -30,6 +39,10 @@ function getStoredValue(keys) {
 
 function getRoleId() {
   return Number(getStoredValue(["rol_id", "role_id"]) || 0);
+}
+
+function getCurrentSedeId() {
+  return Number(getStoredValue(["sede_id"]) || 0);
 }
 
 function formatCurrency(value) {
@@ -116,9 +129,18 @@ function renderReportes() {
 }
 
 async function loadSedes() {
-  if (getRoleId() !== 1) return;
+  reporteSede.innerHTML = getRoleId() === 1
+    ? '<option value="">Todas las sedes</option>'
+    : '<option value="">Mi sede</option>';
+
   try {
-    const data = await apiRequest(SEDES_URL);
+    let data;
+    try {
+      data = await apiRequest(getRoleId() === 1 ? ADMIN_SEDES_URL : SEDES_URL);
+    } catch {
+      data = await apiRequest(SEDES_URL);
+    }
+
     sedesCache = Array.isArray(data) ? data : [];
     sedesCache.forEach((sede) => {
       const option = document.createElement('option');
@@ -126,8 +148,188 @@ async function loadSedes() {
       option.textContent = sede.nombre || `Sede ${sede.id}`;
       reporteSede.append(option);
     });
+
+    if (getRoleId() !== 1) {
+      const sedeId = getCurrentSedeId();
+      if (sedeId) reporteSede.value = String(sedeId);
+      reporteSede.disabled = true;
+    }
   } catch (error) {
     console.warn(error.message);
+  }
+}
+
+
+function clearCanvas(canvas, emptyMessage = "Sin datos para graficar") {
+  if (!canvas) return;
+  const ctx = canvas.getContext("2d");
+  const width = canvas.width;
+  const height = canvas.height;
+  ctx.clearRect(0, 0, width, height);
+  ctx.fillStyle = "#64748b";
+  ctx.font = "14px Arial";
+  ctx.textAlign = "center";
+  ctx.fillText(emptyMessage, width / 2, height / 2);
+}
+
+function drawBarChart(canvas, data, labelKey, valueKey, formatter = (value) => String(value)) {
+  if (!canvas) return;
+  if (!Array.isArray(data) || !data.length) {
+    clearCanvas(canvas);
+    return;
+  }
+
+  const ctx = canvas.getContext("2d");
+  const width = canvas.width;
+  const height = canvas.height;
+  const padding = 42;
+  const chartHeight = height - padding * 2;
+  const chartWidth = width - padding * 2;
+  const maxValue = Math.max(...data.map((item) => Number(item[valueKey] || 0)), 1);
+  const barWidth = Math.max(18, chartWidth / data.length - 12);
+
+  ctx.clearRect(0, 0, width, height);
+  ctx.strokeStyle = "#dbe7f5";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(padding, padding);
+  ctx.lineTo(padding, height - padding);
+  ctx.lineTo(width - padding, height - padding);
+  ctx.stroke();
+
+  data.forEach((item, index) => {
+    const value = Number(item[valueKey] || 0);
+    const barHeight = (value / maxValue) * chartHeight;
+    const x = padding + index * (chartWidth / data.length) + 6;
+    const y = height - padding - barHeight;
+
+    ctx.fillStyle = "#f97316";
+    ctx.fillRect(x, y, barWidth, barHeight);
+
+    ctx.fillStyle = "#0f172a";
+    ctx.font = "11px Arial";
+    ctx.textAlign = "center";
+    ctx.fillText(formatter(value), x + barWidth / 2, Math.max(14, y - 6));
+
+    const label = String(item[labelKey] || "-").slice(0, 12);
+    ctx.fillStyle = "#64748b";
+    ctx.fillText(label, x + barWidth / 2, height - 16);
+  });
+}
+
+function drawLineChart(canvas, data, labelKey, valueKey) {
+  if (!canvas) return;
+  if (!Array.isArray(data) || !data.length) {
+    clearCanvas(canvas);
+    return;
+  }
+
+  const ctx = canvas.getContext("2d");
+  const width = canvas.width;
+  const height = canvas.height;
+  const padding = 42;
+  const chartHeight = height - padding * 2;
+  const chartWidth = width - padding * 2;
+  const maxValue = Math.max(...data.map((item) => Number(item[valueKey] || 0)), 1);
+
+  ctx.clearRect(0, 0, width, height);
+  ctx.strokeStyle = "#dbe7f5";
+  ctx.beginPath();
+  ctx.moveTo(padding, padding);
+  ctx.lineTo(padding, height - padding);
+  ctx.lineTo(width - padding, height - padding);
+  ctx.stroke();
+
+  ctx.strokeStyle = "#1d4ed8";
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+
+  data.forEach((item, index) => {
+    const x = padding + (data.length === 1 ? chartWidth / 2 : (index / (data.length - 1)) * chartWidth);
+    const y = height - padding - (Number(item[valueKey] || 0) / maxValue) * chartHeight;
+    if (index === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  });
+  ctx.stroke();
+
+  data.forEach((item, index) => {
+    const x = padding + (data.length === 1 ? chartWidth / 2 : (index / (data.length - 1)) * chartWidth);
+    const y = height - padding - (Number(item[valueKey] || 0) / maxValue) * chartHeight;
+    ctx.fillStyle = "#1d4ed8";
+    ctx.beginPath();
+    ctx.arc(x, y, 5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#64748b";
+    ctx.font = "11px Arial";
+    ctx.textAlign = "center";
+    ctx.fillText(String(item[labelKey] || "-").slice(5), x, height - 16);
+  });
+}
+
+function drawPieChart(canvas, data, labelKey, valueKey) {
+  if (!canvas) return;
+  if (!Array.isArray(data) || !data.length) {
+    clearCanvas(canvas);
+    return;
+  }
+
+  const ctx = canvas.getContext("2d");
+  const width = canvas.width;
+  const height = canvas.height;
+  const total = data.reduce((acc, item) => acc + Number(item[valueKey] || 0), 0);
+  if (!total) {
+    clearCanvas(canvas);
+    return;
+  }
+
+  const colors = ["#f97316", "#1d4ed8", "#16a34a", "#9333ea", "#dc2626", "#0891b2"];
+  let start = -Math.PI / 2;
+  const radius = Math.min(width, height) / 3;
+  const cx = width / 2 - 40;
+  const cy = height / 2;
+
+  ctx.clearRect(0, 0, width, height);
+
+  data.forEach((item, index) => {
+    const value = Number(item[valueKey] || 0);
+    const slice = (value / total) * Math.PI * 2;
+    ctx.fillStyle = colors[index % colors.length];
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, radius, start, start + slice);
+    ctx.closePath();
+    ctx.fill();
+    start += slice;
+  });
+
+  data.forEach((item, index) => {
+    const y = 36 + index * 24;
+    ctx.fillStyle = colors[index % colors.length];
+    ctx.fillRect(width - 130, y - 10, 12, 12);
+    ctx.fillStyle = "#0f172a";
+    ctx.font = "12px Arial";
+    ctx.textAlign = "left";
+    ctx.fillText(`${item[labelKey]} (${item[valueKey]})`, width - 112, y);
+  });
+}
+
+function renderGraficas(data) {
+  drawLineChart(ventasDiaChart, data?.ventas_por_dia || [], "fecha", "total");
+  drawBarChart(productosTopChart, data?.productos_top || [], "producto", "cantidad");
+  drawBarChart(gananciaProductoChart, data?.ganancias || [], "producto", "ganancia", formatCurrency);
+  drawPieChart(ventasSedeChart, data?.ventas_sede || [], "sede", "total");
+  drawPieChart(metodosPagoChart, data?.metodos_pago || [], "metodo", "cantidad");
+  drawBarChart(stockBajoChart, data?.stock_bajo || [], "producto", "stock");
+}
+
+async function cargarGraficas() {
+  try {
+    const query = buildQuery();
+    const data = await apiRequest(`${GRAFICAS_URL}?${query}`);
+    renderGraficas(data);
+  } catch (error) {
+    [ventasDiaChart, productosTopChart, gananciaProductoChart, ventasSedeChart, metodosPagoChart, stockBajoChart]
+      .forEach((canvas) => clearCanvas(canvas, error.message));
   }
 }
 
@@ -138,6 +340,7 @@ async function consultarReporte() {
     const data = await apiRequest(`${REPORTES_URL}?${query}`);
     reportesCache = Array.isArray(data) ? data : [];
     renderReportes();
+    await cargarGraficas();
   } catch (error) {
     reportesTableBody.innerHTML = `<tr><td colspan="10">${error.message}</td></tr>`;
     showAlert(error.message);
@@ -177,5 +380,6 @@ exportCsvBtn.addEventListener('click', exportarCsv);
 
 if (authToken) {
   setDefaultDates();
-  loadSedes();
+  void loadSedes();
+  [ventasDiaChart, productosTopChart, gananciaProductoChart, ventasSedeChart, metodosPagoChart, stockBajoChart].forEach((canvas) => clearCanvas(canvas));
 }

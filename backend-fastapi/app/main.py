@@ -3,10 +3,33 @@ from pathlib import Path
 from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import inspect, text
 from app.db.base import Base
 from app.db.session import engine
 
 Base.metadata.create_all(bind=engine)
+
+
+def _ensure_sqlite_columns() -> None:
+    if not str(engine.url).startswith("sqlite"):
+        return
+    inspector = inspect(engine)
+    tables = set(inspector.get_table_names())
+    if "PRODUCTOS" in tables:
+        columnas = {col["name"] for col in inspector.get_columns("PRODUCTOS")}
+        with engine.begin() as conn:
+            if "costo_compra" not in columnas:
+                conn.execute(text('ALTER TABLE "PRODUCTOS" ADD COLUMN costo_compra NUMERIC(10, 2) NOT NULL DEFAULT 0'))
+            if "umbral_minimo" not in columnas:
+                conn.execute(text('ALTER TABLE "PRODUCTOS" ADD COLUMN umbral_minimo INTEGER NOT NULL DEFAULT 5'))
+    if "INVENTARIO" in tables:
+        columnas = {col["name"] for col in inspector.get_columns("INVENTARIO")}
+        with engine.begin() as conn:
+            if "umbral_minimo" not in columnas:
+                conn.execute(text('ALTER TABLE "INVENTARIO" ADD COLUMN umbral_minimo INTEGER NOT NULL DEFAULT 5'))
+
+
+_ensure_sqlite_columns()
 
 load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 

@@ -19,7 +19,7 @@
             <h1>Catalogo de Productos</h1>
             <p>
               Administra el catalogo global: crea categorias y productos con
-              precio, descripcion e imagen.
+              precio de compra, precio de venta, descripcion e imagen.
             </p>
           </div>
           <div class="actions-row">
@@ -42,7 +42,9 @@
                 <tr>
                   <th>Nombre</th>
                   <th>Categoria</th>
-                  <th>Precio</th>
+                  <th>Precio compra</th>
+                  <th>Precio venta</th>
+                  <th>Umbral</th>
                   <th>Descripcion</th>
                   <th>Estado</th>
                   <th>Acciones</th>
@@ -81,8 +83,16 @@
               </select>
             </div>
             <div class="field">
-              <label for="precio">Precio</label>
+              <label for="costo_compra">Precio de compra</label>
+              <input id="costo_compra" name="costo_compra" type="number" min="0" step="0.01" required placeholder="Ej. 8000" />
+            </div>
+            <div class="field">
+              <label for="precio">Precio de venta</label>
               <input id="precio" name="precio" type="number" min="0" step="0.01" required placeholder="Ej. 15000" />
+            </div>
+            <div class="field">
+              <label for="umbral_minimo">Umbral minimo de stock</label>
+              <input id="umbral_minimo" name="umbral_minimo" type="number" min="0" step="1" required placeholder="Ej. 10" />
             </div>
             <div class="field">
               <label for="descripcion">Descripcion</label>

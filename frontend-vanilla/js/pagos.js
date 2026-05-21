@@ -184,7 +184,7 @@ function renderPagosRecientes() {
       const pedido = pago.pedido_id || pago.id_pedido || "-";
       const mesa = pago.mesa_nombre || pago.mesa || `Mesa ${pago.mesa_id ?? "-"}`;
       const metodo = pago.metodo_pago || pago.metodo || "-";
-      const total = Number(pago.total || pago.valor || pago.monto || 0);
+      const total = Number(pago.monto_total || pago.total || pago.valor || pago.monto || 0);
       const detalle = pago.referencia || pago.detalle || "-";
 
       return `

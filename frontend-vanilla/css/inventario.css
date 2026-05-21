@@ -114,3 +114,35 @@
     flex-direction: column;
   }
 }
+
+
+.algorithm-controls {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) auto auto;
+  gap: 1rem;
+  align-items: end;
+}
+
+.algorithm-result {
+  margin-top: 1rem;
+  padding: 1rem;
+  border: 1px dashed var(--border);
+  border-radius: 16px;
+  color: var(--muted);
+  background: rgba(248, 250, 252, 0.8);
+}
+
+.algorithm-result strong {
+  color: var(--text);
+}
+
+.algorithm-result ul {
+  margin: 0.75rem 0 0;
+  padding-left: 1.2rem;
+}
+
+@media (max-width: 720px) {
+  .algorithm-controls {
+    grid-template-columns: 1fr;
+  }
+}

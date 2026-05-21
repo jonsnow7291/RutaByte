@@ -44,11 +44,16 @@ class PagoResponse(BaseModel):
     referencia: str | None
     comprobante: str | None
     creado_en: datetime
+    mesa_id: int | None = None
+    mesa_nombre: str | None = None
+    sede_id: int | None = None
 
 
 class PedidoPendienteCobroResponse(BaseModel):
     id: int
     mesa_id: int
+    mesa_nombre: str | None = None
+    sede_id: int | None = None
     usuario_id: int
     estado: str
     total: Decimal

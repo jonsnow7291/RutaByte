@@ -6,6 +6,8 @@ const API_BASE_URL =
 const INVENTARIO_URL = `${API_BASE_URL.replace(/\/$/, "")}/cajero/inventario`;
 const INVENTARIO_ENTRADAS_URL = `${INVENTARIO_URL}/entradas`;
 const INVENTARIO_MOVIMIENTOS_URL = `${INVENTARIO_URL}/movimientos`;
+const INVENTARIO_VORAZ_URL = `${INVENTARIO_URL}/sugerencia-voraz`;
+const INVENTARIO_MOCHILA_URL = `${INVENTARIO_URL}/optimizar-compra`;
 const PRODUCTOS_URL = `${API_BASE_URL.replace(/\/$/, "")}/api/productos`;
 
 // intentamos primero la ruta de admin y luego la publica
@@ -31,11 +33,15 @@ const entradaForm = document.getElementById("entradaForm");
 const entradaSede = document.getElementById("entradaSede");
 const entradaProducto = document.getElementById("entradaProducto");
 const entradaCantidad = document.getElementById("entradaCantidad");
-const entradaUmbral = document.getElementById("entradaUmbral");
+const entradaUmbral = document.getElementById("entradaUmbral"); // compatibilidad: el campo ya no existe en el modal
 const summaryRole = document.getElementById("summaryRole");
 const summarySede = document.getElementById("summarySede");
 const summaryCriticos = document.getElementById("summaryCriticos");
 const summaryMovimientos = document.getElementById("summaryMovimientos");
+const algoritmoPresupuesto = document.getElementById("algoritmoPresupuesto");
+const runVorazBtn = document.getElementById("runVorazBtn");
+const runMochilaBtn = document.getElementById("runMochilaBtn");
+const algoritmoResultado = document.getElementById("algoritmoResultado");
 
 let inventarioCache = [];
 let movimientosCache = [];
@@ -133,42 +139,51 @@ function getList(payload) {
 }
 
 function getProductoNombre(item) {
-  // 1. Intenta directo desde backend
   const nombreDirecto =
     item?.producto_nombre ||
     item?.nombre_producto ||
     item?.producto?.nombre ||
+    item?.inventario?.producto_nombre ||
+    item?.inventario?.producto?.nombre ||
     item?.nombre;
 
-  if (nombreDirecto && nombreDirecto !== "Producto") return nombreDirecto;
+  if (nombreDirecto && String(nombreDirecto).trim().toLowerCase() !== "producto") {
+    return String(nombreDirecto).trim();
+  }
 
-  // 2. Buscar ID en diferentes formatos
-  const productoId =
+  const productoId = Number(
     item?.producto_id ||
     item?.id_producto ||
-    item?.producto?.id;
-
-  if (!productoId) return "Producto";
-
-  // 3. Buscar en cache
-  const producto = productosCache.find(
-    (p) => Number(p.id) === Number(productoId)
+    item?.producto?.id ||
+    item?.inventario?.producto_id ||
+    item?.inventario?.producto?.id ||
+    0
   );
 
+  const producto = productosCache.find((p) => Number(p.id) === productoId);
   return producto?.nombre || "Producto";
 }
 
 function getProductoCodigo(item) {
   const codigoDirecto =
-    item?.codigo ||
     item?.producto_codigo ||
-    item?.producto?.codigo;
+    item?.codigo ||
+    item?.producto?.codigo ||
+    item?.inventario?.producto_codigo ||
+    item?.inventario?.producto?.codigo;
 
-  if (codigoDirecto) return codigoDirecto;
+  if (codigoDirecto) return String(codigoDirecto).trim();
 
-  const productoId = Number(item?.producto_id || item?.id_producto || item?.producto?.id || 0);
+  const productoId = Number(
+    item?.producto_id ||
+    item?.id_producto ||
+    item?.producto?.id ||
+    item?.inventario?.producto_id ||
+    item?.inventario?.producto?.id ||
+    0
+  );
+
   const producto = productosCache.find((p) => Number(p.id) === productoId);
-
   return producto?.codigo || `PROD-${productoId || "-"}`;
 }
 
@@ -177,7 +192,25 @@ function getStock(item) {
 }
 
 function getUmbral(item) {
-  return Number(item?.umbral ?? item?.umbral_critico ?? item?.stock_minimo ?? 0);
+  const productoId = Number(
+    item?.producto_id ||
+    item?.id_producto ||
+    item?.producto?.id ||
+    item?.inventario?.producto_id ||
+    0
+  );
+
+  const producto = productosCache.find((p) => Number(p.id) === productoId);
+
+  return Number(
+    item?.umbral_minimo ??
+    item?.producto?.umbral_minimo ??
+    producto?.umbral_minimo ??
+    item?.umbral ??
+    item?.umbral_critico ??
+    item?.stock_minimo ??
+    0
+  );
 }
 
 function isCritical(item) {
@@ -402,7 +435,17 @@ async function loadMovimientos() {
   movimientosTableBody.innerHTML = '<tr><td class="empty-state" colspan="6">Cargando movimientos...</td></tr>';
   try {
     const params = new URLSearchParams();
+    const roleId = getRoleId();
     const sedeId = filterSede.value || getCurrentSedeId();
+
+    if (roleId === 1 && !sedeId) {
+      movimientosCache = [];
+      movimientosTableBody.innerHTML =
+        '<tr><td class="empty-state" colspan="6">Selecciona una sede para consultar los movimientos.</td></tr>';
+      renderSummary();
+      return;
+    }
+
     if (sedeId) params.set("sede_id", sedeId);
 
     const payload = await apiRequest(
@@ -414,6 +457,63 @@ async function loadMovimientos() {
     movimientosCache = [];
     movimientosTableBody.innerHTML = `<tr><td class="empty-state" colspan="6">${escapeHtml(error.message)}</td></tr>`;
     renderSummary();
+  }
+}
+
+function getSelectedSedeForAlgorithms() {
+  return Number(filterSede.value || getCurrentSedeId() || entradaSede.value || 0);
+}
+
+function renderAlgoritmoResultado(resultado) {
+  const productos = resultado.productos_seleccionados || [];
+  const titulo =
+    resultado.titulo ||
+    (String(resultado.algoritmo || "").toLowerCase().includes("mochila")
+      ? "Compra recomendada"
+      : "Prioridad de reabastecimiento");
+  if (!productos.length) {
+    algoritmoResultado.innerHTML = `
+      <strong>${escapeHtml(titulo)}</strong><br />
+      No se encontraron productos que requieran compra con el presupuesto indicado.
+    `;
+    return;
+  }
+
+  algoritmoResultado.innerHTML = `
+    <strong>${escapeHtml(titulo)}</strong><br />
+    Presupuesto: ${Number(resultado.presupuesto || 0).toLocaleString("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 })} ·
+    Usado: ${Number(resultado.total_usado || 0).toLocaleString("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 })} ·
+    Saldo: ${Number(resultado.saldo || 0).toLocaleString("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 })}
+    <ul>
+      ${productos.map((p) => {
+        const cantidad = Number(p.cantidad_recomendada || 0);
+        const subtotal = Number(p.subtotal || (cantidad * Number(p.costo_compra || 0)));
+        return `<li>${escapeHtml(p.codigo || "")} · ${escapeHtml(p.nombre)} — comprar ${cantidad} und. · stock ${escapeHtml(p.stock)} / umbral ${escapeHtml(p.umbral_minimo ?? p.umbral)} · costo unitario ${Number(p.costo_compra || 0).toLocaleString("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 })} · subtotal ${subtotal.toLocaleString("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 })}</li>`;
+      }).join("")}
+    </ul>
+  `;
+}
+
+async function ejecutarAlgoritmo(tipo) {
+  const sedeId = getSelectedSedeForAlgorithms();
+  const presupuesto = Number(algoritmoPresupuesto?.value || 0);
+
+  if (!sedeId) {
+    showAlert("Selecciona una sede para ejecutar los algoritmos.");
+    return;
+  }
+  if (!presupuesto || presupuesto <= 0) {
+    showAlert("Ingresa un presupuesto mayor que cero.");
+    return;
+  }
+
+  try {
+    const baseUrl = tipo === "voraz" ? INVENTARIO_VORAZ_URL : INVENTARIO_MOCHILA_URL;
+    const params = new URLSearchParams({ sede_id: String(sedeId), presupuesto: String(presupuesto) });
+    const resultado = await apiRequest(`${baseUrl}?${params.toString()}`);
+    renderAlgoritmoResultado(resultado);
+  } catch (error) {
+    showAlert(error.message);
   }
 }
 
@@ -453,9 +553,6 @@ async function submitEntrada(event) {
     motivo: entradaForm.motivo.value.trim() || null,
   };
 
-  if (entradaUmbral.value !== "") {
-    payload.umbral_minimo = Number(entradaUmbral.value);
-  }
 
   if (!sede_id || !payload.producto_id || !payload.cantidad) {
     showAlert("Completa sede, producto y cantidad.");
@@ -500,6 +597,8 @@ filterCritico?.addEventListener("change", renderInventario);
 openEntradaModalBtn?.addEventListener("click", openModal);
 closeEntradaModalBtn?.addEventListener("click", closeModal);
 cancelEntradaModalBtn?.addEventListener("click", closeModal);
+runVorazBtn?.addEventListener("click", () => ejecutarAlgoritmo("voraz"));
+runMochilaBtn?.addEventListener("click", () => ejecutarAlgoritmo("mochila"));
 refreshInventarioBtn?.addEventListener("click", async () => {
   await Promise.all([loadInventario(), loadMovimientos()]);
   showAlert("Inventario actualizado.", "success");

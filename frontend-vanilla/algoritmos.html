@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>RutaByte | Algoritmos</title>
+    <link rel="stylesheet" href="css/styles.css" />
+    <link rel="stylesheet" href="css/algoritmos.css" />
+    <script src="js/auth-guard.js" defer></script>
+    <script src="js/algoritmos.js" defer></script>
+  </head>
+  <body>
+    <main class="algoritmos-page">
+      <section class="algoritmos-shell">
+        <header class="algoritmos-header">
+          <div>
+            <span class="eyebrow">Módulo técnico</span>
+            <h1>Algoritmos aplicados</h1>
+            <p>
+              Demostración integrada de algoritmo voraz, mochila y tipos de recursividad aplicados al contexto de inventario.
+            </p>
+          </div>
+          <div class="actions-row">
+            <button id="runAllBtn" class="btn btn-primary" type="button">Ejecutar todo</button>
+            <a class="btn btn-ghost" href="dashboard.html">Volver</a>
+          </div>
+        </header>
+
+        <section class="content">
+          <div id="alertSlot" class="alert-slot" aria-live="polite"></div>
+
+          <section class="algorithm-grid">
+            <article class="algorithm-card">
+              <span class="eyebrow">Voraz</span>
+              <h2>Reabastecimiento urgente</h2>
+              <p>Prioriza productos con mayor diferencia entre umbral y stock, respetando el presupuesto.</p>
+              <button id="runVorazBtn" class="btn btn-primary" type="button">Ejecutar voraz</button>
+              <pre id="vorazResult" class="result-box">Sin ejecutar.</pre>
+            </article>
+
+            <article class="algorithm-card">
+              <span class="eyebrow">Mochila 0/1</span>
+              <h2>Compra óptima</h2>
+              <p>Selecciona la mejor combinación de productos sin superar el presupuesto disponible.</p>
+              <button id="runMochilaBtn" class="btn btn-primary" type="button">Ejecutar mochila</button>
+              <pre id="mochilaResult" class="result-box">Sin ejecutar.</pre>
+            </article>
+
+            <article class="algorithm-card algorithm-card--wide">
+              <span class="eyebrow">Recursividad</span>
+              <h2>Simple, múltiple, anidada y cruzada</h2>
+              <p>Ejecuta cuatro ejemplos: suma recursiva, Fibonacci, aplanamiento de lista y par/impar indirecto.</p>
+              <button id="runRecursividadBtn" class="btn btn-primary" type="button">Ejecutar recursividad</button>
+              <pre id="recursividadResult" class="result-box">Sin ejecutar.</pre>
+            </article>
+          </section>
+        </section>
+      </section>
+    </main>
+  </body>
+</html>

@@ -23,3 +23,15 @@ class MovimientoInventario(Base):
 
     inventario = relationship("Inventario", back_populates="movimientos")
     usuario = relationship("Usuario")
+    @property
+    def producto_id(self) -> int | None:
+        return self.inventario.producto_id if self.inventario else None
+
+    @property
+    def producto_nombre(self) -> str | None:
+        return self.inventario.producto.nombre if self.inventario and self.inventario.producto else None
+
+    @property
+    def producto_codigo(self) -> str | None:
+        return self.inventario.producto.codigo if self.inventario and self.inventario.producto else None
+

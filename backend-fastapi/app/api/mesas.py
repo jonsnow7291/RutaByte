@@ -6,16 +6,28 @@ from app.db.session import get_db
 from app.models.mesa import Mesa
 from app.models.sede import Sede
 from app.schemas.mesa import MesaCreate, MesaUpdate, MesaResponse
-from app.dependencies.auth import get_current_admin
+from app.dependencies.auth import get_current_admin, get_current_user
+from app.services.algoritmos_service import recursividad_cruzada_validar
 
 router = APIRouter(prefix="/api/mesas", tags=["mesas"])
 
 @router.get("", response_model=list[MesaResponse])
 def listar_mesas(
     db: Session = Depends(get_db),
-    current_user: dict = Depends(get_current_admin),
+    current_user: dict = Depends(get_current_user),
 ):
-    return list(db.scalars(select(Mesa)).all())
+    role_id = int(current_user.get("rol_id", current_user.get("role_id", 0)))
+    stmt = select(Mesa)
+
+    # Admin consulta todas; cajero/mesero solo su sede asignada.
+    if role_id != 1:
+        user_sede_id = current_user.get("sede_id")
+        if user_sede_id is None:
+            return []
+        stmt = stmt.where(Mesa.sede_id == int(user_sede_id))
+
+    stmt = stmt.order_by(Mesa.sede_id.asc(), Mesa.identificador_mesa.asc())
+    return list(db.scalars(stmt).all())
 
 @router.post("", response_model=MesaResponse, status_code=status.HTTP_201_CREATED)
 def crear_mesa(
@@ -38,6 +50,10 @@ def crear_mesa(
             status_code=400,
             detail="Ya existe una mesa con ese identificador en la sede",
         )
+
+    # Recursividad cruzada/indirecta aplicada: clasifica si el consecutivo
+    # de la mesa es par o impar usando funciones recursivas cruzadas.
+    recursividad_cruzada_validar(len(payload.identificador_mesa))
 
     mesa = Mesa(
         sede_id=payload.sede_id,
@@ -73,6 +89,10 @@ def actualizar_mesa(
             status_code=400,
             detail="Ya existe una mesa con ese identificador en la sede",
         )
+
+    # Recursividad cruzada/indirecta aplicada como validación académica
+    # dentro del flujo real de parametrización de mesas.
+    recursividad_cruzada_validar(len(payload.identificador_mesa))
 
     mesa.sede_id = payload.sede_id
     mesa.identificador_mesa = payload.identificador_mesa

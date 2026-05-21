@@ -35,6 +35,34 @@ def _pedido_permitido(pedido: Pedido, current_user: dict, db: Session) -> None:
         raise HTTPException(status_code=403, detail="No puede operar pedidos de otra sede")
 
 
+def _mesa_de_pedido(db: Session, pedido: Pedido | None) -> Mesa | None:
+    if pedido is None:
+        return None
+    if getattr(pedido, "mesa", None) is not None:
+        return pedido.mesa
+    return db.get(Mesa, pedido.mesa_id)
+
+
+def _serializar_pago(db: Session, pago: Pago) -> dict:
+    pedido = pago.pedido
+    mesa = _mesa_de_pedido(db, pedido)
+    return {
+        "id": pago.id,
+        "pedido_id": pago.pedido_id,
+        "usuario_id": pago.usuario_id,
+        "metodo_pago": pago.metodo_pago,
+        "monto_total": pago.monto_total,
+        "monto_efectivo": pago.monto_efectivo,
+        "monto_tarjeta": pago.monto_tarjeta,
+        "referencia": pago.referencia,
+        "comprobante": pago.comprobante,
+        "creado_en": pago.creado_en,
+        "mesa_id": mesa.id if mesa else None,
+        "mesa_nombre": mesa.identificador_mesa if mesa else None,
+        "sede_id": mesa.sede_id if mesa else None,
+    }
+
+
 @router.get("/pendientes", response_model=list[PedidoPendienteCobroResponse])
 def listar_pedidos_pendientes(
     current_user: dict = Depends(get_current_cajero),
@@ -49,10 +77,13 @@ def listar_pedidos_pendientes(
             _pedido_permitido(pedido, current_user, db)
         except HTTPException:
             continue
+        mesa = _mesa_de_pedido(db, pedido)
         resultados.append(
             PedidoPendienteCobroResponse(
                 id=pedido.id,
                 mesa_id=pedido.mesa_id,
+                mesa_nombre=mesa.identificador_mesa if mesa else None,
+                sede_id=mesa.sede_id if mesa else None,
                 usuario_id=pedido.usuario_id,
                 estado=pedido.estado,
                 total=_pedido_total(pedido),
@@ -61,12 +92,39 @@ def listar_pedidos_pendientes(
     return resultados
 
 
+
+
+@router.get("", response_model=list[PagoResponse])
+def listar_pagos_recientes(
+    current_user: dict = Depends(get_current_cajero),
+    db: Session = Depends(get_db),
+) -> list[dict]:
+    stmt = (
+        select(Pago)
+        .options(selectinload(Pago.pedido))
+        .order_by(Pago.creado_en.desc())
+        .limit(50)
+    )
+    pagos = list(db.scalars(stmt).all())
+
+    resultados: list[dict] = []
+    for pago in pagos:
+        if pago.pedido is None:
+            continue
+        try:
+            _pedido_permitido(pago.pedido, current_user, db)
+        except HTTPException:
+            continue
+        resultados.append(_serializar_pago(db, pago))
+    return resultados
+
+
 @router.post("", response_model=PagoResponse, status_code=status.HTTP_201_CREATED)
 def procesar_pago(
     payload: PagoCreate,
     current_user: dict = Depends(get_current_cajero),
     db: Session = Depends(get_db),
-) -> Pago:
+) -> dict:
     stmt = select(Pedido).options(selectinload(Pedido.detalles)).where(Pedido.id == payload.pedido_id)
     pedido = db.scalar(stmt)
     if pedido is None:
@@ -113,4 +171,4 @@ def procesar_pago(
     db.add(pago)
     db.commit()
     db.refresh(pago)
-    return pago
+    return _serializar_pago(db, pago)

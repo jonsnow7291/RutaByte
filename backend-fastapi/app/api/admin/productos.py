@@ -8,6 +8,7 @@ from app.dependencies.auth import get_current_admin
 from app.db.session import get_db
 from app.models.categoria import Categoria
 from app.models.producto import Producto
+from app.services.algoritmos_service import recursividad_anidada_aplanar
 from app.schemas.producto import (
     CategoriaCreate,
     CategoriaResponse,
@@ -45,6 +46,43 @@ def crear_categoria(payload: CategoriaCreate, db: Session = Depends(get_db)) -> 
     db.commit()
     db.refresh(categoria)
     return categoria
+
+
+
+
+@router.get("/categorias/arbol")
+def arbol_categorias_productos(db: Session = Depends(get_db)) -> dict:
+    """Recursividad anidada aplicada al catálogo.
+
+    Construye una estructura categoría -> productos y usa recursividad anidada
+    para aplanar los nombres. Esto no es un ejercicio aislado: se aplica al
+    catálogo real de productos del sistema.
+    """
+    categorias = list(db.scalars(select(Categoria).where(Categoria.activa.is_(True)).order_by(Categoria.nombre.asc())).all())
+    productos = list(db.scalars(select(Producto).where(Producto.activo.is_(True)).order_by(Producto.nombre.asc())).all())
+
+    arbol = []
+    estructura_anidada = []
+    for categoria in categorias:
+        productos_categoria = [
+            {
+                "id": producto.id,
+                "codigo": producto.codigo,
+                "nombre": producto.nombre,
+                "precio_venta": producto.precio,
+                "precio_compra": producto.costo_compra,
+            }
+            for producto in productos
+            if producto.categoria_id == categoria.id
+        ]
+        arbol.append({"categoria": categoria.nombre, "productos": productos_categoria})
+        estructura_anidada.append([categoria.nombre, [p["nombre"] for p in productos_categoria]])
+
+    return {
+        "algoritmo_aplicado": "Recursividad anidada",
+        "arbol": arbol,
+        "nombres_aplanados": recursividad_anidada_aplanar(estructura_anidada),
+    }
 
 
 # ── Productos ───────────────────────────────────────────────

@@ -25,6 +25,7 @@ class ProductoCreate(BaseModel):
     descripcion: str | None = Field(default=None, max_length=2000)
     precio: Decimal = Field(ge=0)
     costo_compra: Decimal = Field(default=0, ge=0)
+    umbral_minimo: int = Field(default=5, ge=0)
     url_imagen: str | None = Field(default=None, max_length=500)
 
 
@@ -35,6 +36,7 @@ class ProductoUpdate(BaseModel):
     descripcion: str | None = Field(default=None, max_length=2000)
     precio: Decimal | None = Field(default=None, ge=0)
     costo_compra: Decimal | None = Field(default=None, ge=0)
+    umbral_minimo: int | None = Field(default=None, ge=0)
     url_imagen: str | None = Field(default=None, max_length=500)
 
 
@@ -48,6 +50,7 @@ class ProductoResponse(BaseModel):
     descripcion: str | None
     precio: Decimal
     costo_compra: Decimal
+    umbral_minimo: int
     url_imagen: str | None
     activo: bool
     creado_en: datetime

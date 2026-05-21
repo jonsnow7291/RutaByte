@@ -159,9 +159,18 @@ function formatPrice(value) {
   return Number(value).toLocaleString("es-CO", { style: "currency", currency: "COP", minimumFractionDigits: 0 });
 }
 
+function parseNumberInput(value) {
+  const normalized = String(value ?? "")
+    .trim()
+    .replace(/\./g, "")
+    .replace(",", ".");
+  const number = Number(normalized);
+  return Number.isFinite(number) ? number : 0;
+}
+
 function renderEmptyState() {
   tableBody.innerHTML = `
-    <tr><td class="empty-state" colspan="6">No hay productos registrados todavia.</td></tr>
+    <tr><td class="empty-state" colspan="8">No hay productos registrados todavia.</td></tr>
   `;
 }
 
@@ -177,7 +186,9 @@ function renderProductos(productos) {
 
     const nombre = escapeHtml(p.nombre);
     const categoria = escapeHtml(getCategoriaNombre(p.categoria_id));
+    const costoCompra = formatPrice(p.costo_compra || 0);
     const precio = formatPrice(p.precio);
+    const umbral = Number(p.umbral_minimo ?? 0);
     const desc = escapeHtml(p.descripcion || "-");
     const activo = p.activo ?? true;
     const estadoClass = activo ? "tag tag--active" : "tag tag--inactive";
@@ -188,7 +199,9 @@ function renderProductos(productos) {
       <tr>
         <td>${nombre}</td>
         <td><span class="tag tag--role">${categoria}</span></td>
+        <td>${costoCompra}</td>
         <td>${precio}</td>
+        <td>${umbral}</td>
         <td class="desc-cell">${desc}</td>
         <td><span class="${estadoClass}">${estadoText}</span></td>
         <td>
@@ -211,7 +224,7 @@ async function loadProductos() {
   if (!authToken) return;
 
   try {
-    tableBody.innerHTML = `<tr><td class="empty-state" colspan="6">Cargando productos...</td></tr>`;
+    tableBody.innerHTML = `<tr><td class="empty-state" colspan="8">Cargando productos...</td></tr>`;
     const payload = await apiRequest(PRODUCTOS_URL);
     const lista = getList(payload);
     currentProductos = lista;
@@ -228,11 +241,13 @@ async function createProducto(event) {
 
   const nombre = productoForm.nombre.value.trim();
   const categoria_id = Number(productoForm.categoria_id.value);
-  const precio = Number(productoForm.precio.value);
+  const precio = parseNumberInput(productoForm.precio.value);
+  const costo_compra = parseNumberInput(productoForm.costo_compra.value);
+  const umbral_minimo = Number.parseInt(productoForm.umbral_minimo.value || "0", 10);
   const descripcion = productoForm.descripcion.value.trim() || null;
   const url_imagen = productoForm.url_imagen.value.trim() || null;
 
-  const payload = { nombre, categoria_id, precio, descripcion, url_imagen };
+  const payload = { nombre, categoria_id, precio, costo_compra, umbral_minimo, descripcion, url_imagen };
 
   try {
     if (editingId) {
@@ -299,6 +314,8 @@ tableBody.addEventListener("click", async (event) => {
     productoForm.nombre.value = producto.nombre || "";
     productoForm.categoria_id.value = producto.categoria_id || "";
     productoForm.precio.value = producto.precio ?? "";
+    productoForm.umbral_minimo.value = producto.umbral_minimo ?? 5;
+    productoForm.costo_compra.value = producto.costo_compra ?? "";
     productoForm.descripcion.value = producto.descripcion || "";
     productoForm.url_imagen.value = producto.url_imagen || "";
 

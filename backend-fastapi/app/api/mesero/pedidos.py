@@ -20,6 +20,31 @@ router = APIRouter(
 )
 
 
+def _validar_mesa_de_sede(mesa: Mesa, current_user: dict) -> None:
+    """Evita que meseros/cajeros operen mesas de otra sede.
+
+    El administrador puede operar cualquier sede; los demás roles quedan
+    restringidos a la sede_id incluida en su JWT.
+    """
+    role_id = int(current_user.get("rol_id", current_user.get("role_id", 0)))
+    if role_id == 1:
+        return
+
+    user_sede_id = current_user.get("sede_id")
+    if user_sede_id is None or int(user_sede_id) != int(mesa.sede_id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No puede operar mesas o pedidos de otra sede",
+        )
+
+
+def _validar_pedido_de_sede(pedido: Pedido, current_user: dict, db: Session) -> None:
+    mesa = db.get(Mesa, pedido.mesa_id)
+    if mesa is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Mesa no encontrada")
+    _validar_mesa_de_sede(mesa, current_user)
+
+
 @router.post("", response_model=PedidoResponse, status_code=status.HTTP_201_CREATED)
 def crear_pedido(
     payload: PedidoCreate,
@@ -29,6 +54,7 @@ def crear_pedido(
     mesa = db.get(Mesa, payload.mesa_id)
     if mesa is None or not mesa.activa:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Mesa no valida")
+    _validar_mesa_de_sede(mesa, current_user)
 
     usuario_id = int(current_user.get("usuario_id"))
 
@@ -86,11 +112,20 @@ def listar_pedidos(
     current_user: dict = Depends(get_current_mesero),
     db: Session = Depends(get_db),
 ) -> list[Pedido]:
+    role_id = int(current_user.get("rol_id", current_user.get("role_id", 0)))
     usuario_id = int(current_user.get("usuario_id"))
-    stmt = (
-        select(Pedido)
-        .where(Pedido.usuario_id == usuario_id)
-        .order_by(Pedido.creado_en.desc())
+    stmt = select(Pedido).join(Mesa, Pedido.mesa_id == Mesa.id).order_by(Pedido.creado_en.desc())
+
+    if role_id == 1:
+        return list(db.scalars(stmt).all())
+
+    user_sede_id = current_user.get("sede_id")
+    if user_sede_id is None:
+        return []
+
+    stmt = stmt.where(
+        Pedido.usuario_id == usuario_id,
+        Mesa.sede_id == int(user_sede_id),
     )
     return list(db.scalars(stmt).all())
 
@@ -111,6 +146,7 @@ def obtener_pedido(
     pedido = db.scalar(stmt)
     if pedido is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Pedido no encontrado")
+    _validar_pedido_de_sede(pedido, current_user, db)
     return pedido
 
 
@@ -126,6 +162,7 @@ def cambiar_estado(
     pedido = db.get(Pedido, pedido_id)
     if pedido is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Pedido no encontrado")
+    _validar_pedido_de_sede(pedido, current_user, db)
     if role_id != 1 and pedido.usuario_id != usuario_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="No puede modificar este pedido")
 

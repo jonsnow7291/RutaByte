@@ -18,6 +18,10 @@ class InventarioItemResponse(BaseModel):
     id: int
     sede_id: int
     producto_id: int
+    producto_nombre: str | None = None
+    producto_codigo: str | None = None
+    costo_compra: float | None = None
+    precio_venta: float | None = None
     stock: int
     umbral_minimo: int
     actualizado_en: datetime
@@ -28,6 +32,9 @@ class MovimientoInventarioResponse(BaseModel):
 
     id: int
     inventario_id: int
+    producto_id: int | None = None
+    producto_nombre: str | None = None
+    producto_codigo: str | None = None
     usuario_id: int
     tipo: str
     cantidad: int

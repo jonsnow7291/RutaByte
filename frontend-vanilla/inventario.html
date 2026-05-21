@@ -79,6 +79,25 @@
             </div>
           </section>
 
+
+          <section class="card-surface algorithm-panel">
+            <div class="section-heading">
+              <div>
+                <h2>Planeacion inteligente de reabastecimiento</h2>
+                <p>El sistema analiza el stock disponible, el umbral minimo y el presupuesto para sugerir compras prioritarias.</p>
+              </div>
+            </div>
+            <div class="algorithm-controls">
+              <div class="field">
+                <label for="algoritmoPresupuesto">Presupuesto de compra</label>
+                <input id="algoritmoPresupuesto" type="number" min="0" step="100" placeholder="Ej. 50000" />
+              </div>
+              <button id="runVorazBtn" class="btn btn-ghost" type="button">Sugerir reabastecimiento</button>
+              <button id="runMochilaBtn" class="btn btn-primary" type="button">Optimizar compra</button>
+            </div>
+            <div id="algoritmoResultado" class="algorithm-result">Selecciona una sede, ingresa presupuesto y ejecuta una sugerencia.</div>
+          </section>
+
           <section class="card-surface">
             <div class="section-heading">
               <div>
@@ -157,10 +176,6 @@
             <div class="field">
               <label for="entradaCantidad">Cantidad</label>
               <input id="entradaCantidad" name="cantidad" type="number" min="1" step="1" required placeholder="Ej. 12" />
-            </div>
-            <div class="field">
-              <label for="entradaUmbral">Umbral critico</label>
-              <input id="entradaUmbral" name="umbral" type="number" min="0" step="1" placeholder="Ej. 5" />
             </div>
             <div class="field field--full">
               <label for="entradaMotivo">Detalle</label>
