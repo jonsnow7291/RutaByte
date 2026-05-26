@@ -44,6 +44,7 @@
                   <th>Categoria</th>
                   <th>Precio compra</th>
                   <th>Precio venta</th>
+                  <th>IVA (%)</th>
                   <th>Umbral</th>
                   <th>Descripcion</th>
                   <th>Estado</th>
@@ -84,11 +85,19 @@
             </div>
             <div class="field">
               <label for="costo_compra">Precio de compra</label>
-              <input id="costo_compra" name="costo_compra" type="number" min="0" step="0.01" required placeholder="Ej. 8000" />
+              <input id="costo_compra" name="costo_compra" type="text" required placeholder="Ej. 8.000" />
             </div>
             <div class="field">
-              <label for="precio">Precio de venta</label>
-              <input id="precio" name="precio" type="number" min="0" step="0.01" required placeholder="Ej. 15000" />
+              <label for="precio">Precio de venta (Base)</label>
+              <input id="precio" name="precio" type="text" required placeholder="Ej. 15.000" />
+            </div>
+            <div class="field">
+              <label for="impuesto_iva">Impuesto IVA (%)</label>
+              <select id="impuesto_iva" name="impuesto_iva" required>
+                <option value="0">0% (Exento)</option>
+                <option value="8">8% (Consumo/Servicio)</option>
+                <option value="19" selected>19% (General)</option>
+              </select>
             </div>
             <div class="field">
               <label for="umbral_minimo">Umbral minimo de stock</label>

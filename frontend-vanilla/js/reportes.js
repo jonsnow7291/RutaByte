@@ -375,11 +375,94 @@ function setDefaultDates() {
   fechaFin.value = toLocalInput(end);
 }
 
+const exportMasivoBtn = document.getElementById("exportMasivoBtn");
+
+async function exportarMasivoBackground() {
+  try {
+    const query = buildQuery();
+    const result = await apiRequest(`${API_BASE_URL.replace(/\/$/, "")}/reportes/masivos?${query}`, {
+      method: "POST"
+    });
+    showAlert(result.message || "El reporte se está procesando en segundo plano. Te notificaremos al finalizar.", "success");
+  } catch (error) {
+    showAlert(error.message);
+  }
+}
+
+function connectNotifications() {
+  const wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+  const wsUrl = `${wsProtocol}//${API_BASE_URL.replace(/^https?:\/\//, "")}/ws/pedidos?token=${authToken}`;
+
+  const socket = new WebSocket(wsUrl);
+
+  socket.onmessage = (event) => {
+    try {
+      const data = JSON.parse(event.data);
+      if (data.evento === "REPORTE_MASIVO_COMPLETO") {
+        showToastNotification(data.mensaje, data.archivo_url);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+}
+
+function showToastNotification(message, actionUrl) {
+  let container = document.getElementById("reportToastContainer");
+  if (!container) {
+    container = document.createElement("div");
+    container.id = "reportToastContainer";
+    container.style.position = "fixed";
+    container.style.bottom = "24px";
+    container.style.right = "24px";
+    container.style.zIndex = "9999";
+    container.style.display = "flex";
+    container.style.flexDirection = "column";
+    container.style.gap = "12px";
+    document.body.appendChild(container);
+  }
+
+  const toast = document.createElement("div");
+  toast.style.background = "rgba(22, 163, 74, 0.9)";
+  toast.style.color = "#ffffff";
+  toast.style.padding = "16px 24px";
+  toast.style.borderRadius = "12px";
+  toast.style.boxShadow = "0 8px 32px 0 rgba(0, 0, 0, 0.15)";
+  toast.style.backdropFilter = "blur(8px)";
+  toast.style.fontFamily = "system-ui, sans-serif";
+  toast.style.fontSize = "14px";
+  toast.style.fontWeight = "500";
+  toast.style.transition = "all 0.3s ease";
+  toast.style.transform = "translateY(50px)";
+  toast.style.opacity = "0";
+
+  toast.innerHTML = `
+    <div>${message}</div>
+    <a class="btn btn-ghost" href="${actionUrl}" style="margin-top: 8px; display: inline-block; color: white; border: 1px solid white; text-decoration: none; padding: 4px 8px; border-radius: 4px;" download>Descargar Reporte Generado</a>
+  `;
+  container.appendChild(toast);
+
+  // Animate in
+  setTimeout(() => {
+    toast.style.transform = "translateY(0)";
+    toast.style.opacity = "1";
+  }, 10);
+
+  // Remove after 8 seconds
+  setTimeout(() => {
+    toast.style.transform = "translateY(-50px)";
+    toast.style.opacity = "0";
+    setTimeout(() => toast.remove(), 300);
+  }, 8000);
+}
+
 runReportBtn.addEventListener('click', consultarReporte);
 exportCsvBtn.addEventListener('click', exportarCsv);
+exportMasivoBtn?.addEventListener('click', exportarMasivoBackground);
 
 if (authToken) {
   setDefaultDates();
   void loadSedes();
+  connectNotifications();
   [ventasDiaChart, productosTopChart, gananciaProductoChart, ventasSedeChart, metodosPagoChart, stockBajoChart].forEach((canvas) => clearCanvas(canvas));
 }

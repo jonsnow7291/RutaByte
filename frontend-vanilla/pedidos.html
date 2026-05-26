@@ -85,5 +85,37 @@
         </section>
       </section>
     </main>
+    <!-- MODAL TRANSFERENCIA -->
+    <div id="transferirModal" class="modal" aria-hidden="true">
+      <div class="modal-card modal-card--sm" role="dialog" aria-modal="true" aria-labelledby="transferirTitle">
+        <div class="modal-header">
+          <div>
+            <span class="eyebrow">MESA</span>
+            <h2 id="transferirTitle">Transferir Pedido</h2>
+          </div>
+          <button id="closeTransferirModalBtn" class="icon-btn" type="button" aria-label="Cerrar modal">&times;</button>
+        </div>
+
+        <form id="transferirForm">
+          <input type="hidden" id="transferirPedidoId" />
+          <div class="modal-body">
+            <div class="field">
+              <label for="mesa_destino_id">Mesa Destino</label>
+              <select id="mesa_destino_id" name="mesa_destino_id" required>
+                <option value="">Seleccionar mesa libre</option>
+              </select>
+              <p style="color: var(--muted); font-size: 0.85rem; margin-top: 0.25rem;">
+                Solo se listan las mesas activas y libres de tu misma sede.
+              </p>
+            </div>
+          </div>
+
+          <div class="modal-footer">
+            <button id="cancelTransferirModalBtn" class="btn btn-ghost" type="button">Cancelar</button>
+            <button class="btn btn-primary" type="submit">Confirmar transferencia</button>
+          </div>
+        </form>
+      </div>
+    </div>
   </body>
 </html>

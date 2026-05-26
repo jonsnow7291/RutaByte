@@ -34,6 +34,17 @@ const entradaSede = document.getElementById("entradaSede");
 const entradaProducto = document.getElementById("entradaProducto");
 const entradaCantidad = document.getElementById("entradaCantidad");
 const entradaUmbral = document.getElementById("entradaUmbral"); // compatibilidad: el campo ya no existe en el modal
+
+// Output Modal Elements
+const openSalidaModalBtn = document.getElementById("openSalidaModalBtn");
+const closeSalidaModalBtn = document.getElementById("closeSalidaModalBtn");
+const cancelSalidaModalBtn = document.getElementById("cancelSalidaModalBtn");
+const salidaModal = document.getElementById("salidaModal");
+const salidaForm = document.getElementById("salidaForm");
+const salidaSede = document.getElementById("salidaSede");
+const salidaProducto = document.getElementById("salidaProducto");
+const salidaCantidad = document.getElementById("salidaCantidad");
+
 const summaryRole = document.getElementById("summaryRole");
 const summarySede = document.getElementById("summarySede");
 const summaryCriticos = document.getElementById("summaryCriticos");
@@ -323,6 +334,7 @@ function populateSedes() {
     : '<option value="">Mi sede</option>';
 
   entradaSede.innerHTML = '<option value="">Seleccionar sede</option>';
+  salidaSede.innerHTML = '<option value="">Seleccionar sede</option>';
 
   sedeOptions.forEach((sede) => {
     const optionFilter = document.createElement("option");
@@ -334,6 +346,11 @@ function populateSedes() {
     optionModal.value = String(sede.id);
     optionModal.textContent = sede.nombre;
     entradaSede.appendChild(optionModal);
+
+    const optionModalSalida = document.createElement("option");
+    optionModalSalida.value = String(sede.id);
+    optionModalSalida.textContent = sede.nombre;
+    salidaSede.appendChild(optionModalSalida);
   });
 
   if (currentSedeId) {
@@ -341,22 +358,31 @@ function populateSedes() {
       filterSede.value = String(currentSedeId);
     }
     entradaSede.value = String(currentSedeId);
+    salidaSede.value = String(currentSedeId);
   } else if (isAdmin && sedesCache.length) {
     filterSede.value = "";
     entradaSede.value = String(sedesCache[0].id);
+    salidaSede.value = String(sedesCache[0].id);
   }
 
   filterSede.disabled = !isAdmin;
   entradaSede.disabled = !isAdmin && Boolean(currentSedeId);
+  salidaSede.disabled = !isAdmin && Boolean(currentSedeId);
 }
 
 function populateProductos() {
   entradaProducto.innerHTML = '<option value="">Seleccionar producto</option>';
+  salidaProducto.innerHTML = '<option value="">Seleccionar producto</option>';
   productosCache.forEach((producto) => {
     const option = document.createElement("option");
     option.value = String(producto.id);
     option.textContent = `${producto.codigo || `PROD-${producto.id}`} · ${producto.nombre}`;
     entradaProducto.appendChild(option);
+
+    const optionSalida = document.createElement("option");
+    optionSalida.value = String(producto.id);
+    optionSalida.textContent = `${producto.codigo || `PROD-${producto.id}`} · ${producto.nombre}`;
+    salidaProducto.appendChild(optionSalida);
   });
 }
 
@@ -496,7 +522,8 @@ function renderAlgoritmoResultado(resultado) {
 
 async function ejecutarAlgoritmo(tipo) {
   const sedeId = getSelectedSedeForAlgorithms();
-  const presupuesto = Number(algoritmoPresupuesto?.value || 0);
+  const rawPresupuesto = String(algoritmoPresupuesto?.value || "0").replace(/\D/g, "");
+  const presupuesto = parseFloat(rawPresupuesto) || 0;
 
   if (!sedeId) {
     showAlert("Selecciona una sede para ejecutar los algoritmos.");
@@ -540,6 +567,29 @@ function closeModal() {
   }
 }
 
+function openSalidaModal() {
+  populateSedes();
+  salidaModal.classList.add("is-open");
+  salidaModal.setAttribute("aria-hidden", "false");
+
+  const currentSedeId = getCurrentSedeId();
+  if (currentSedeId) {
+    salidaSede.value = String(currentSedeId);
+  } else if (getRoleId() === 1 && sedesCache.length) {
+    salidaSede.value = String(sedesCache[0].id);
+  }
+}
+
+function closeSalidaModal() {
+  salidaModal.classList.remove("is-open");
+  salidaModal.setAttribute("aria-hidden", "true");
+  salidaForm.reset();
+
+  if (getCurrentSedeId()) {
+    salidaSede.value = String(getCurrentSedeId());
+  }
+}
+
 async function submitEntrada(event) {
   event.preventDefault();
 
@@ -572,6 +622,85 @@ async function submitEntrada(event) {
   }
 }
 
+async function submitSalida(event) {
+  event.preventDefault();
+
+  const sede_id = Number(salidaSede.value || getCurrentSedeId());
+  const producto_id = Number(salidaProducto.value);
+  const cantidad = Number(salidaCantidad.value);
+  const motivo = salidaForm.motivo.value.trim();
+
+  if (!sede_id || !producto_id || !cantidad || !motivo) {
+    showAlert("Completa sede, producto, cantidad y motivo de salida.");
+    return;
+  }
+
+  const payload = {
+    producto_id,
+    cantidad,
+    motivo,
+  };
+
+  try {
+    const result = await apiRequest(`${INVENTARIO_URL}/salidas?sede_id=${sede_id}`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+    showAlert("Salida registrada correctamente.", "success");
+    closeSalidaModal();
+    await Promise.all([loadInventario(), loadMovimientos()]);
+  } catch (error) {
+    showAlert(error.message);
+  }
+}
+
+
+async function loadConsolidado() {
+  const table = document.getElementById("consolidadoTableBody");
+  if (!table) return;
+  table.innerHTML = '<tr><td class="empty-state" colspan="6">Cargando inventario consolidado...</td></tr>';
+
+  try {
+    const promises = sedesCache.map(async (sede) => {
+      try {
+        const payload = await apiRequest(`${INVENTARIO_URL}?sede_id=${sede.id}`);
+        const items = getList(payload);
+        return items.map(item => ({ ...item, sede_nombre: sede.nombre }));
+      } catch (e) {
+        console.warn(`Error cargando inventario de sede ${sede.id}:`, e);
+        return [];
+      }
+    });
+
+    const results = await Promise.all(promises);
+    const flatItems = results.flat();
+
+    if (!flatItems.length) {
+      table.innerHTML = '<tr><td class="empty-state" colspan="6">No hay registros consolidados.</td></tr>';
+      return;
+    }
+
+    table.innerHTML = flatItems.map((item) => {
+      const critical = isCritical(item);
+      const stock = getStock(item);
+      const umbral = getUmbral(item);
+      return `
+        <tr>
+          <td>${escapeHtml(getProductoCodigo(item))}</td>
+          <td>${escapeHtml(getProductoNombre(item))}</td>
+          <td><span class="tag tag--role">${escapeHtml(item.sede_nombre)}</span></td>
+          <td>${stock}</td>
+          <td>${umbral}</td>
+          <td><span class="stock-pill ${critical ? "stock-pill--critical" : "stock-pill--ok"}">${critical ? "Stock bajo" : "Normal"}</span></td>
+        </tr>
+      `;
+    }).join("");
+  } catch (error) {
+    table.innerHTML = `<tr><td class="empty-state" colspan="6">Error: ${escapeHtml(error.message)}</td></tr>`;
+  }
+}
+
+
 function guardRoleAccess() {
   const roleId = getRoleId();
   if (![1, 2].includes(roleId)) {
@@ -587,31 +716,75 @@ async function init() {
   guardRoleAccess();
   await Promise.all([loadSedes(), loadProductos()]);
   await Promise.all([loadInventario(), loadMovimientos()]);
+  if (getRoleId() === 1) {
+    const sect = document.getElementById("consolidadoSection");
+    if (sect) sect.style.display = "block";
+    await loadConsolidado();
+  }
 }
 
 filterSede?.addEventListener("change", async () => {
   await Promise.all([loadInventario(), loadMovimientos()]);
+  if (getRoleId() === 1) {
+    await loadConsolidado();
+  }
 });
 filterTexto?.addEventListener("input", renderInventario);
 filterCritico?.addEventListener("change", renderInventario);
 openEntradaModalBtn?.addEventListener("click", openModal);
 closeEntradaModalBtn?.addEventListener("click", closeModal);
 cancelEntradaModalBtn?.addEventListener("click", closeModal);
+openSalidaModalBtn?.addEventListener("click", openSalidaModal);
+closeSalidaModalBtn?.addEventListener("click", closeSalidaModal);
+cancelSalidaModalBtn?.addEventListener("click", closeSalidaModal);
 runVorazBtn?.addEventListener("click", () => ejecutarAlgoritmo("voraz"));
 runMochilaBtn?.addEventListener("click", () => ejecutarAlgoritmo("mochila"));
 refreshInventarioBtn?.addEventListener("click", async () => {
   await Promise.all([loadInventario(), loadMovimientos()]);
+  if (getRoleId() === 1) {
+    await loadConsolidado();
+  }
   showAlert("Inventario actualizado.", "success");
 });
 entradaModal?.addEventListener("click", (event) => {
   if (event.target === entradaModal) closeModal();
 });
+salidaModal?.addEventListener("click", (event) => {
+  if (event.target === salidaModal) closeSalidaModal();
+});
 entradaForm?.addEventListener("submit", submitEntrada);
+salidaForm?.addEventListener("submit", submitSalida);
 
 document.addEventListener("keydown", (event) => {
-  if (event.key === "Escape" && entradaModal?.classList.contains("is-open")) {
-    closeModal();
+  if (event.key === "Escape") {
+    if (entradaModal?.classList.contains("is-open")) {
+      closeModal();
+    }
+    if (salidaModal?.classList.contains("is-open")) {
+      closeSalidaModal();
+    }
   }
 });
 
 init();
+
+(function setupCurrencyInputs() {
+  function setupCurrencyInput(input) {
+    if (!input) return;
+    input.addEventListener("input", (e) => {
+      let cursorPosition = e.target.selectionStart;
+      const originalLength = e.target.value.length;
+      const clean = e.target.value.replace(/\D/g, "");
+      if (clean) {
+        const formatted = clean.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+        e.target.value = formatted;
+        const newLength = e.target.value.length;
+        cursorPosition = cursorPosition + (newLength - originalLength);
+        e.target.setSelectionRange(cursorPosition, cursorPosition);
+      } else {
+        e.target.value = "";
+      }
+    });
+  }
+  setupCurrencyInput(algoritmoPresupuesto);
+})();

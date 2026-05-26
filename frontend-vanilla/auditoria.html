@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>RutaByte | Auditoría de Sesión</title>
+    <link rel="stylesheet" href="css/styles.css" />
+    <link rel="stylesheet" href="css/sedes.css" />
+    <link rel="stylesheet" href="css/usuarios.css" />
+    <script src="js/auth-guard.js" defer></script>
+    <script src="js/auditoria.js" defer></script>
+  </head>
+  <body>
+    <main class="sedes-page">
+      <section class="sedes-shell">
+        <header class="sedes-header">
+          <div>
+            <span class="eyebrow">HU-A09</span>
+            <h1>Auditoría de Sesión</h1>
+            <p>
+              Monitorea los intentos de acceso, direcciones IP de origen y bloqueos temporales del sistema.
+            </p>
+          </div>
+          <div class="actions-row">
+            <a class="btn btn-ghost" href="dashboard.html">Volver</a>
+          </div>
+        </header>
+
+        <!-- Filtros de auditoría -->
+        <section class="content" style="margin-bottom: 20px;">
+          <div style="background: var(--bg-card, #ffffff); padding: 20px; border-radius: 12px; border: 1px solid var(--border-color, #e2e8f0); box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
+            <form id="filterForm" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; align-items: end;">
+              <div class="field" style="margin-bottom: 0;">
+                <label for="tipo_evento">Tipo de Evento</label>
+                <select id="tipo_evento" name="tipo_evento" style="width: 100%;">
+                  <option value="">Todos los eventos</option>
+                  <option value="LOGIN_EXITOSO">LOGIN_EXITOSO</option>
+                  <option value="LOGIN_FALLIDO">LOGIN_FALLIDO</option>
+                </select>
+              </div>
+
+              <div class="field" style="margin-bottom: 0;">
+                <label for="fecha_inicio">Fecha Inicio</label>
+                <input type="date" id="fecha_inicio" name="fecha_inicio" style="width: 100%;" />
+              </div>
+
+              <div class="field" style="margin-bottom: 0;">
+                <label for="fecha_fin">Fecha Fin</label>
+                <input type="date" id="fecha_fin" name="fecha_fin" style="width: 100%;" />
+              </div>
+
+              <div style="display: flex; gap: 8px;">
+                <button type="submit" class="btn btn-primary" style="flex: 1; padding: 10px;">Filtrar</button>
+                <button type="button" id="resetFiltersBtn" class="btn btn-ghost" style="padding: 10px;">Limpiar</button>
+              </div>
+            </form>
+          </div>
+        </section>
+
+        <section class="content">
+          <div id="alertSlot" class="alert-slot" aria-live="polite"></div>
+
+          <div class="table-wrap">
+            <table aria-label="Listado de registros de auditoria">
+              <thead>
+                <tr>
+                  <th>ID Registro</th>
+                  <th>ID Usuario</th>
+                  <th>Tipo Evento</th>
+                  <th>Dirección IP</th>
+                  <th>Fecha y Hora</th>
+                </tr>
+              </thead>
+              <tbody id="auditoriaTableBody">
+                <tr>
+                  <td class="empty-state" colspan="5">Cargando registros de auditoría...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </section>
+    </main>
+  </body>
+</html>

@@ -8,6 +8,7 @@ from passlib.context import CryptContext
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from app.core.email import send_recovery_email
 from app.core.security import ACCESS_TOKEN_EXPIRE_HOURS, create_access_token
 from app.db.session import get_db
 from app.models.auditoria import RegistroAuditoria
@@ -48,8 +49,40 @@ def login(payload: LoginRequest, request: Request, db: Session = Depends(get_db)
         )
     )
 
+    if usuario and usuario.bloqueado_hasta:
+        ahora = datetime.now()
+        if ahora < usuario.bloqueado_hasta:
+            diferencia = usuario.bloqueado_hasta - ahora
+            minutos_restantes = int(diferencia.total_seconds() / 60) + 1
+            db.add(
+                RegistroAuditoria(
+                    usuario_id=usuario.id,
+                    tipo_evento="LOGIN_FALLIDO",
+                    direccion_ip=_extract_client_ip(request),
+                )
+            )
+            db.commit()
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Cuenta bloqueada temporalmente por exceso de intentos fallidos. Intente en {minutos_restantes} minutos.",
+            )
+
     credenciales_validas = bool(usuario) and _verify_password(payload.contrasena, usuario.hash_contrasena)
     evento = "LOGIN_EXITOSO" if credenciales_validas else "LOGIN_FALLIDO"
+
+    mensaje_adicional = ""
+    if usuario:
+        if credenciales_validas:
+            usuario.intentos_fallidos = 0
+            usuario.bloqueado_hasta = None
+        else:
+            usuario.intentos_fallidos += 1
+            if usuario.intentos_fallidos >= 5:
+                usuario.bloqueado_hasta = datetime.now() + timedelta(minutes=15)
+                mensaje_adicional = " Cuenta bloqueada por 15 minutos."
+            else:
+                intentos_restantes = 5 - usuario.intentos_fallidos
+                mensaje_adicional = f" Intentos restantes: {intentos_restantes}."
 
     db.add(
         RegistroAuditoria(
@@ -63,7 +96,7 @@ def login(payload: LoginRequest, request: Request, db: Session = Depends(get_db)
     if not credenciales_validas or usuario is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Credenciales invalidas",
+            detail=f"Credenciales invalidas.{mensaje_adicional}",
             headers={"WWW-Authenticate": "Bearer"},
         )
 
@@ -112,6 +145,9 @@ def solicitar_recuperacion(payload: RecuperarRequest, db: Session = Depends(get_
         )
     )
     db.commit()
+
+    # Trigger recovery email emulation!
+    send_recovery_email(usuario.correo, usuario.nombre, token_str)
 
     return {
         "message": "Si el correo existe, se genero un token de recuperacion.",

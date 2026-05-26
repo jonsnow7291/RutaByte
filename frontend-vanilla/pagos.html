@@ -14,7 +14,7 @@
       <section class="pagos-shell">
         <header class="pagos-header">
           <div>
-            <span class="eyebrow">HU-C01</span>
+            <span class="eyebrow">HU-C01 / HU-C07</span>
             <h1>Cobro de pedidos</h1>
             <p>Procesa pagos de pedidos entregados y registra el cierre de la venta.</p>
           </div>
@@ -75,7 +75,7 @@
           <section class="table-section">
             <h2>Pagos recientes</h2>
             <p class="section-copy">
-              Historial de cobros registrados en la sede seleccionada.
+              Historial de cobros registrados en la sede seleccionada con acceso a comprobantes.
             </p>
 
             <div class="table-wrap">
@@ -88,6 +88,7 @@
                     <th>METODO</th>
                     <th>TOTAL</th>
                     <th>DETALLE</th>
+                    <th>COMPROBANTE</th>
                   </tr>
                 </thead>
                 <tbody id="pagosRecientesTableBody"></tbody>
@@ -119,6 +120,38 @@
               <strong id="pagoTotal">$0</strong>
             </div>
 
+            <!-- DESCUENTO MANUAL (ADMIN AUTHORIZED) -->
+            <fieldset class="card-surface" style="border: 1px solid var(--border); padding: 1rem; border-radius: 14px; margin-bottom: 1.5rem; display: grid; gap: 0.75rem;">
+              <legend style="font-weight: bold; color: var(--accent); padding: 0 0.5rem; font-size: 0.9rem;">Descuento Manual (Requiere Admin)</legend>
+              <div style="display: flex; gap: 0.5rem;">
+                <div class="field" style="flex: 1; margin: 0;">
+                  <label for="tipo_descuento">Tipo</label>
+                  <select id="tipo_descuento" name="tipo_descuento">
+                    <option value="PORCENTAJE">Porcentaje (%)</option>
+                    <option value="FIJO">Valor Fijo ($)</option>
+                  </select>
+                </div>
+                <div class="field" style="flex: 1; margin: 0;">
+                  <label for="descuento_valor">Valor</label>
+                  <input id="descuento_valor" name="descuento_valor" type="text" inputmode="numeric" value="0" />
+                </div>
+              </div>
+              
+              <div style="display: flex; gap: 0.5rem;">
+                <div class="field" style="flex: 1; margin: 0;">
+                  <label for="admin_username">Admin Correo</label>
+                  <input id="admin_username" name="admin_username" type="text" placeholder="admin@rutabyte.test" />
+                </div>
+                <div class="field" style="flex: 1; margin: 0;">
+                  <label for="admin_password">Contraseña Admin</label>
+                  <input id="admin_password" name="admin_password" type="password" placeholder="••••••••" />
+                </div>
+              </div>
+              <button id="btnAplicarDescuento" class="btn btn-ghost" type="button" style="width: 100%; margin-top: 0.5rem; border-color: var(--accent); color: var(--accent); font-weight: bold;">
+                Aplicar descuento
+              </button>
+            </fieldset>
+
             <div class="field">
               <label for="metodo_pago">Metodo de pago</label>
               <select id="metodo_pago" name="metodo_pago" required>
@@ -144,9 +177,8 @@
               <input
                 id="monto_efectivo"
                 name="monto_efectivo"
-                type="number"
-                min="0"
-                step="0.01"
+                type="text"
+                inputmode="numeric"
                 placeholder="Solo si aplica"
               />
             </div>
@@ -157,6 +189,31 @@
             <button class="btn btn-primary" type="submit">Confirmar pago</button>
           </div>
         </form>
+      </div>
+    </div>
+
+    <div id="comprobanteModal" class="modal" aria-hidden="true">
+      <div class="modal-card comprobante-modal-card" role="dialog" aria-modal="true" aria-labelledby="comprobanteModalTitle">
+        <div class="modal-header">
+          <div>
+            <span id="comprobanteBadge" class="eyebrow">COMPROBANTE</span>
+            <h2 id="comprobanteModalTitle">Comprobante de pago</h2>
+            <p id="comprobanteSubtitulo">Visualiza el comprobante antes de imprimir.</p>
+          </div>
+
+          <button id="closeComprobanteModalBtn" class="icon-btn" type="button" aria-label="Cerrar comprobante">
+            &times;
+          </button>
+        </div>
+
+        <div class="modal-body">
+          <div id="comprobantePreview" class="receipt-preview"></div>
+        </div>
+
+        <div class="modal-footer">
+          <button id="cancelComprobanteModalBtn" class="btn btn-ghost" type="button">Cerrar</button>
+          <button id="printComprobanteBtn" class="btn btn-primary" type="button">Imprimir</button>
+        </div>
       </div>
     </div>
   </body>

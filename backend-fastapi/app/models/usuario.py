@@ -23,6 +23,8 @@ class Usuario(Base):
     correo: Mapped[str] = mapped_column(String(150), unique=True, nullable=False)
     hash_contrasena: Mapped[str] = mapped_column(String(255), nullable=False)
     activo: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    intentos_fallidos: Mapped[int] = mapped_column(default=0, nullable=False)
+    bloqueado_hasta: Mapped[datetime | None] = mapped_column(DateTime(timezone=False), nullable=True)
     creado_en: Mapped[datetime] = mapped_column(DateTime(timezone=False), server_default=func.now(), nullable=False)
 
     rol: Mapped["Rol"] = relationship(back_populates="usuarios")

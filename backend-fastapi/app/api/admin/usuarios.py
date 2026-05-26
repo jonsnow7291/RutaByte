@@ -22,6 +22,8 @@ router = APIRouter(
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto", bcrypt__rounds=12)
 
 
+from app.core.email import send_credentials_email
+
 @router.post("", response_model=UsuarioResponse, status_code=status.HTTP_201_CREATED)
 def crear_usuario(payload: UsuarioCreate, db: Session = Depends(get_db)) -> Usuario:
     rol = db.get(Rol, payload.rol_id)
@@ -50,6 +52,10 @@ def crear_usuario(payload: UsuarioCreate, db: Session = Depends(get_db)) -> Usua
     db.add(usuario)
     db.commit()
     db.refresh(usuario)
+
+    # Emulate credentials email delivery!
+    send_credentials_email(usuario.correo, usuario.nombre, payload.contrasena)
+
     return usuario
 
 
@@ -60,10 +66,21 @@ def listar_usuarios(db: Session = Depends(get_db)) -> list[Usuario]:
 
 
 @router.delete("/{usuario_id}")
-def desactivar_usuario(usuario_id: int, db: Session = Depends(get_db)) -> dict[str, str | int]:
+def desactivar_usuario(
+    usuario_id: int,
+    current_user: dict = Depends(get_current_admin),
+    db: Session = Depends(get_db),
+) -> dict[str, str | int]:
     usuario = db.get(Usuario, usuario_id)
     if usuario is None or not usuario.activo:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Usuario no encontrado")
+
+    # Prevent self-deactivation!
+    if int(current_user.get("usuario_id")) == usuario_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No puedes desactivar tu propio usuario administrador",
+        )
 
     usuario.activo = False
     db.commit()

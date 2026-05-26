@@ -27,6 +27,7 @@ class ProductoCreate(BaseModel):
     costo_compra: Decimal = Field(default=0, ge=0)
     umbral_minimo: int = Field(default=5, ge=0)
     url_imagen: str | None = Field(default=None, max_length=500)
+    impuesto_iva: Decimal = Field(default=0, ge=0)
 
 
 class ProductoUpdate(BaseModel):
@@ -38,6 +39,7 @@ class ProductoUpdate(BaseModel):
     costo_compra: Decimal | None = Field(default=None, ge=0)
     umbral_minimo: int | None = Field(default=None, ge=0)
     url_imagen: str | None = Field(default=None, max_length=500)
+    impuesto_iva: Decimal | None = Field(default=None, ge=0)
 
 
 class ProductoResponse(BaseModel):
@@ -52,5 +54,6 @@ class ProductoResponse(BaseModel):
     costo_compra: Decimal
     umbral_minimo: int
     url_imagen: str | None
+    impuesto_iva: Decimal
     activo: bool
     creado_en: datetime

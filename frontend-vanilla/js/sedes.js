@@ -8,11 +8,14 @@ const alertSlot = document.getElementById("alertSlot");
 const tableBody = document.getElementById("sedesTableBody");
 const modal = document.getElementById("sedeModal");
 const form = document.getElementById("sedeForm");
+const modalTitle = document.getElementById("modalTitle");
 const openModalBtn = document.getElementById("openModalBtn");
 const closeModalBtn = document.getElementById("closeModalBtn");
 const cancelModalBtn = document.getElementById("cancelModalBtn");
 
 const authToken = window.RutaByteAuthGuard?.requireAuth?.();
+
+let currentEditingSedeId = null;
 
 function getToken() {
   return authToken;
@@ -43,7 +46,17 @@ function escapeHtml(value) {
     .replaceAll("'", "&#39;");
 }
 
-function openModal() {
+function openModal(editingId = null, initialData = {}) {
+  currentEditingSedeId = editingId;
+  if (editingId) {
+    if (modalTitle) modalTitle.textContent = "Editar Sede";
+    form.nombre.value = initialData.nombre || "";
+    form.direccion.value = initialData.direccion || "";
+    form.ciudad.value = initialData.ciudad || "";
+  } else {
+    if (modalTitle) modalTitle.textContent = "Crear Sede";
+    form.reset();
+  }
   modal.classList.add("is-open");
   modal.setAttribute("aria-hidden", "false");
   document.getElementById("nombre").focus();
@@ -53,6 +66,7 @@ function closeModal() {
   modal.classList.remove("is-open");
   modal.setAttribute("aria-hidden", "true");
   form.reset();
+  currentEditingSedeId = null;
   openModalBtn.focus();
 }
 
@@ -96,7 +110,7 @@ function renderSedes(sedes) {
     const nombre = escapeHtml(sede.nombre ?? sede.name ?? "-");
     const direccion = escapeHtml(sede.direccion ?? sede.address ?? "-");
     const ciudad = escapeHtml(sede.ciudad ?? sede.city ?? "-");
-    const activa = sede.activa ?? sede.active ?? true;
+    const activa = sede.activa ?? sede.activa ?? true;
     const estadoClass = activa ? "tag tag--active" : "tag tag--inactive";
     const estadoText = activa ? "Activa" : "Inactiva";
     const disabledAttr = activa ? "" : "disabled";
@@ -108,15 +122,28 @@ function renderSedes(sedes) {
         <td>${ciudad}</td>
         <td><span class="${estadoClass}">${estadoText}</span></td>
         <td>
-          <button
-            class="table-action"
-            type="button"
-            data-action="deactivate"
-            data-id="${escapeHtml(sedeId)}"
-            ${disabledAttr}
-          >
-            Desactivar
-          </button>
+          <div style="display: flex; gap: 8px;">
+            <button
+              class="table-action table-action--success"
+              type="button"
+              data-action="edit"
+              data-id="${escapeHtml(sedeId)}"
+              data-nombre="${nombre}"
+              data-direccion="${direccion}"
+              data-ciudad="${ciudad}"
+            >
+              Editar
+            </button>
+            <button
+              class="table-action"
+              type="button"
+              data-action="deactivate"
+              data-id="${escapeHtml(sedeId)}"
+              ${disabledAttr}
+            >
+              Desactivar
+            </button>
+          </div>
         </td>
       </tr>
     `;
@@ -187,7 +214,7 @@ async function loadSedes() {
   }
 }
 
-async function createSede(event) {
+async function submitSede(event) {
   event.preventDefault();
 
   if (!authToken) {
@@ -199,12 +226,22 @@ async function createSede(event) {
   const ciudad = form.ciudad.value.trim();
 
   try {
-    await apiRequest(API_URL, {
-      method: "POST",
-      body: JSON.stringify({ nombre, direccion, ciudad }),
-    });
+    if (currentEditingSedeId) {
+      // Edit mode (PUT)
+      await apiRequest(`${API_URL}/${currentEditingSedeId}`, {
+        method: "PUT",
+        body: JSON.stringify({ nombre, direccion, ciudad }),
+      });
+      showAlert("Sede actualizada correctamente.", "success");
+    } else {
+      // Create mode (POST)
+      await apiRequest(API_URL, {
+        method: "POST",
+        body: JSON.stringify({ nombre, direccion, ciudad }),
+      });
+      showAlert("Sede creada correctamente.", "success");
+    }
 
-    showAlert("Sede creada correctamente.", "success");
     closeModal();
     await loadSedes();
   } catch (error) {
@@ -234,18 +271,28 @@ async function deactivateSede(sedeId) {
 }
 
 tableBody.addEventListener("click", (event) => {
-  const button = event.target.closest('[data-action="deactivate"]');
-  if (!button) {
+  const deactivateBtn = event.target.closest('[data-action="deactivate"]');
+  if (deactivateBtn) {
+    const sedeId = deactivateBtn.dataset.id;
+    if (sedeId) {
+      void deactivateSede(sedeId);
+    }
     return;
   }
 
-  const sedeId = button.dataset.id;
-  if (sedeId) {
-    void deactivateSede(sedeId);
+  const editBtn = event.target.closest('[data-action="edit"]');
+  if (editBtn) {
+    const sedeId = editBtn.dataset.id;
+    const initialData = {
+      nombre: editBtn.dataset.nombre,
+      direccion: editBtn.dataset.direccion,
+      ciudad: editBtn.dataset.ciudad,
+    };
+    openModal(sedeId, initialData);
   }
 });
 
-openModalBtn.addEventListener("click", openModal);
+openModalBtn.addEventListener("click", () => openModal());
 closeModalBtn.addEventListener("click", closeModal);
 cancelModalBtn.addEventListener("click", closeModal);
 modal.addEventListener("click", (event) => {
@@ -261,7 +308,7 @@ document.addEventListener("keydown", (event) => {
 });
 
 form.addEventListener("submit", (event) => {
-  void createSede(event);
+  void submitSede(event);
 });
 
 void loadSedes();

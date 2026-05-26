@@ -1,6 +1,11 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from datetime import datetime
+from decimal import Decimal
+import os
+import shutil
+
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
@@ -8,6 +13,7 @@ from app.dependencies.auth import get_current_admin
 from app.db.session import get_db
 from app.models.categoria import Categoria
 from app.models.producto import Producto
+from app.models.historial_precio import HistorialPrecio
 from app.services.algoritmos_service import recursividad_anidada_aplanar
 from app.schemas.producto import (
     CategoriaCreate,
@@ -46,6 +52,38 @@ def crear_categoria(payload: CategoriaCreate, db: Session = Depends(get_db)) -> 
     db.commit()
     db.refresh(categoria)
     return categoria
+
+
+@router.put("/categorias/{categoria_id}", response_model=CategoriaResponse)
+def actualizar_categoria(categoria_id: int, payload: CategoriaCreate, db: Session = Depends(get_db)) -> Categoria:
+    categoria = db.get(Categoria, categoria_id)
+    if categoria is None or not categoria.activa:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Categoria no encontrada")
+
+    existe = db.scalar(
+        select(Categoria).where(
+            func.lower(Categoria.nombre) == payload.nombre.lower(),
+            Categoria.id != categoria_id
+        )
+    )
+    if existe:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Ya existe otra categoria con ese nombre")
+
+    categoria.nombre = payload.nombre
+    db.commit()
+    db.refresh(categoria)
+    return categoria
+
+
+@router.delete("/categorias/{categoria_id}")
+def desactivar_categoria(categoria_id: int, db: Session = Depends(get_db)) -> dict[str, str | int]:
+    categoria = db.get(Categoria, categoria_id)
+    if categoria is None or not categoria.activa:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Categoria no encontrada")
+
+    categoria.activa = False
+    db.commit()
+    return {"message": "Categoria desactivada correctamente", "id": categoria_id}
 
 
 
@@ -107,7 +145,12 @@ def crear_producto(payload: ProductoCreate, db: Session = Depends(get_db)) -> Pr
 
 
 @router.put("/{producto_id}", response_model=ProductoResponse)
-def actualizar_producto(producto_id: int, payload: ProductoUpdate, db: Session = Depends(get_db)) -> Producto:
+def actualizar_producto(
+    producto_id: int,
+    payload: ProductoUpdate,
+    current_user: dict = Depends(get_current_admin),
+    db: Session = Depends(get_db),
+) -> Producto:
     producto = db.get(Producto, producto_id)
     if producto is None or not producto.activo:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Producto no encontrado")
@@ -118,6 +161,19 @@ def actualizar_producto(producto_id: int, payload: ProductoUpdate, db: Session =
         categoria = db.get(Categoria, updates["categoria_id"])
         if categoria is None or not categoria.activa:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Categoria no valida")
+
+    # Audit and record price history if price changes!
+    if "precio" in updates:
+        nuevo_precio = Decimal(str(updates["precio"]))
+        if nuevo_precio != producto.precio:
+            cambiado_por_id = int(current_user.get("usuario_id"))
+            historial = HistorialPrecio(
+                producto_id=producto.id,
+                precio_anterior=producto.precio,
+                precio_nuevo=nuevo_precio,
+                cambiado_por=cambiado_por_id,
+            )
+            db.add(historial)
 
     for field, value in updates.items():
         setattr(producto, field, value)
@@ -137,3 +193,32 @@ def desactivar_producto(producto_id: int, db: Session = Depends(get_db)) -> dict
     db.commit()
     db.refresh(producto)
     return {"message": "Producto desactivado correctamente", "id": producto.id}
+
+
+@router.post("/{producto_id}/imagen", response_model=ProductoResponse)
+def subir_imagen_producto(
+    producto_id: int,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+) -> Producto:
+    producto = db.get(Producto, producto_id)
+    if producto is None or not producto.activo:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Producto no encontrado")
+
+    # Validate extension
+    ext = file.filename.split(".")[-1].lower()
+    if ext not in ["jpg", "jpeg", "png", "webp", "gif"]:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Formato de imagen no permitido")
+
+    # Save to local folder static/uploads
+    filename = f"prod_{producto_id}_{int(datetime.now().timestamp())}.{ext}"
+    file_path = os.path.join("static/uploads", filename)
+
+    with open(file_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+
+    # Save relative URL
+    producto.url_imagen = f"/static/uploads/{filename}"
+    db.commit()
+    db.refresh(producto)
+    return producto

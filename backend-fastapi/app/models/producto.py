@@ -25,6 +25,7 @@ class Producto(Base):
     costo_compra: Mapped[Decimal] = mapped_column(Numeric(10, 2), default=0, nullable=False)
     umbral_minimo: Mapped[int] = mapped_column(default=5, nullable=False)
     url_imagen: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    impuesto_iva: Mapped[Decimal] = mapped_column(Numeric(4, 2), default=0, nullable=False)
     activo: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     creado_en: Mapped[datetime] = mapped_column(DateTime(timezone=False), server_default=func.now(), nullable=False)
 

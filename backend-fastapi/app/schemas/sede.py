@@ -22,3 +22,9 @@ class SedeResponse(SedeBase):
     activa: bool
     creado_en: datetime
 
+
+class SedeUpdate(BaseModel):
+    nombre: str | None = Field(default=None, min_length=2, max_length=100)
+    direccion: str | None = Field(default=None, max_length=255)
+    ciudad: str | None = Field(default=None, max_length=100)
+

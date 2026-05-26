@@ -1,6 +1,5 @@
-from __future__ import annotations
-
-from fastapi import APIRouter, Depends, HTTPException, status
+import asyncio
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
@@ -10,8 +9,8 @@ from app.models.detalle_pedido import DetallePedido
 from app.models.mesa import Mesa
 from app.models.pedido import Pedido
 from app.models.producto import Producto
-from app.schemas.pedido import PedidoCreate, PedidoListResponse, PedidoResponse
-from app.services.inventario_service import descontar_inventario
+from app.schemas.pedido import PedidoCreate, PedidoListResponse, PedidoResponse, DetalleItemCancelar
+from app.core.notifications import notification_manager
 
 
 router = APIRouter(
@@ -36,6 +35,14 @@ def _validar_mesa_de_sede(mesa: Mesa, current_user: dict) -> None:
             status_code=status.HTTP_403_FORBIDDEN,
             detail="No puede operar mesas o pedidos de otra sede",
         )
+
+
+def _safe_broadcast(message: dict) -> None:
+    try:
+        loop = asyncio.get_running_loop()
+        loop.create_task(notification_manager.broadcast(message))
+    except RuntimeError:
+        pass
 
 
 def _validar_pedido_de_sede(pedido: Pedido, current_user: dict, db: Session) -> None:
@@ -73,13 +80,8 @@ def crear_pedido(
                     detail=f"Producto con id {item.producto_id} no valido",
                 )
 
-            descontar_inventario(
-                db=db,
-                sede_id=mesa.sede_id,
-                producto_id=item.producto_id,
-                cantidad=item.cantidad,
-                usuario_id=usuario_id,
-            )
+            # NOTE: We have removed the comanda-time inventory discount (descontar_inventario)
+            # from here, and moved it to payment time to achieve atomic transaction sync.
 
             pedido.detalles.append(
                 DetallePedido(
@@ -95,6 +97,19 @@ def crear_pedido(
         db.add(pedido)
         db.commit()
         db.refresh(pedido)
+
+        # Broadcast WebSocket notification!
+        _safe_broadcast(
+            {
+                "evento": "NUEVO_PEDIDO",
+                "pedido_id": pedido.id,
+                "mesa_id": pedido.mesa_id,
+                "identificador_mesa": mesa.identificador_mesa,
+                "sede_id": mesa.sede_id,
+                "mensaje": f"Nuevo pedido #{pedido.id} creado para la Mesa {mesa.identificador_mesa}",
+            }
+        )
+
         return pedido
     except HTTPException:
         db.rollback()
@@ -180,4 +195,121 @@ def cambiar_estado(
 
     pedido.estado = siguiente
     db.commit()
+
+    # Broadcast WebSocket notification!
+    _safe_broadcast(
+        {
+            "evento": "CAMBIO_ESTADO_PEDIDO",
+            "pedido_id": pedido.id,
+            "estado": siguiente,
+            "mensaje": f"El pedido #{pedido.id} cambió a estado {siguiente}",
+        }
+    )
+
     return {"message": f"Pedido actualizado a {siguiente}", "id": pedido.id, "estado": siguiente}
+
+
+@router.post("/{pedido_id}/detalles/{detalle_id}/cancelar")
+def cancelar_item(
+    pedido_id: int,
+    detalle_id: int,
+    payload: DetalleItemCancelar,
+    current_user: dict = Depends(get_current_mesero),
+    db: Session = Depends(get_db),
+) -> dict[str, str]:
+    pedido = db.get(Pedido, pedido_id)
+    if pedido is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Pedido no encontrado")
+    _validar_pedido_de_sede(pedido, current_user, db)
+
+    if pedido.estado in ("PAGADO", "CANCELADO"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No se pueden cancelar ítems de un pedido pagado o cancelado",
+        )
+
+    detalle = db.get(DetallePedido, detalle_id)
+    if detalle is None or detalle.pedido_id != pedido_id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Detalle de pedido no encontrado")
+
+    if detalle.cancelado:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="El ítem ya se encuentra cancelado")
+
+    usuario_id = int(current_user.get("usuario_id"))
+    detalle.cancelado = True
+    detalle.justificacion_cancelacion = payload.justificacion
+    detalle.cancelado_por = usuario_id
+
+    db.commit()
+
+    # Broadcast item cancellation to kitchen WebSocket
+    _safe_broadcast(
+        {
+            "evento": "ANULACION_ITEM",
+            "pedido_id": pedido.id,
+            "detalle_id": detalle.id,
+            "producto_id": detalle.producto_id,
+            "justificacion": payload.justificacion,
+            "mensaje": f"Ítem anulado en pedido #{pedido.id}: {payload.justificacion}",
+        }
+    )
+
+    return {"message": "Item cancelado correctamente"}
+
+
+@router.post("/{pedido_id}/transferir")
+def transferir_pedido(
+    pedido_id: int,
+    mesa_destino_id: int = Query(..., alias="mesa_destino_id"),
+    current_user: dict = Depends(get_current_mesero),
+    db: Session = Depends(get_db),
+) -> dict[str, str]:
+    pedido = db.get(Pedido, pedido_id)
+    if pedido is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Pedido no encontrado")
+    _validar_pedido_de_sede(pedido, current_user, db)
+
+    if pedido.estado in ("PAGADO", "CANCELADO"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No se puede transferir un pedido pagado o cancelado",
+        )
+
+    mesa_origen = db.get(Mesa, pedido.mesa_id)
+    mesa_destino = db.get(Mesa, mesa_destino_id)
+
+    if mesa_destino is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Mesa destino no encontrada")
+
+    _validar_mesa_de_sede(mesa_destino, current_user)
+
+    if not mesa_destino.activa or mesa_destino.estado != "LIBRE":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="La mesa destino no está disponible o no se encuentra libre",
+        )
+
+    old_mesa_id = pedido.mesa_id
+    old_identificador = mesa_origen.identificador_mesa if mesa_origen else f"ID {old_mesa_id}"
+    new_identificador = mesa_destino.identificador_mesa
+
+    # Swap table
+    pedido.mesa_id = mesa_destino_id
+    if mesa_origen:
+        mesa_origen.estado = "LIBRE"
+    mesa_destino.estado = "OCUPADA"
+
+    db.commit()
+
+    # Broadcast layout change to WebSocket
+    _safe_broadcast(
+        {
+            "evento": "TRANSFERENCIA_PEDIDO",
+            "pedido_id": pedido.id,
+            "mesa_origen_id": old_mesa_id,
+            "mesa_destino_id": mesa_destino_id,
+            "mensaje": f"Pedido #{pedido.id} transferido de Mesa {old_identificador} a Mesa {new_identificador}",
+        }
+    )
+
+    return {"message": f"Pedido transferido con éxito de Mesa {old_identificador} a Mesa {new_identificador}"}

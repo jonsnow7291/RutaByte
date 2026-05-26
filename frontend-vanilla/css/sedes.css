@@ -187,11 +187,21 @@ tbody tr:hover {
 
 .modal-card {
   width: min(100%, 560px);
+  max-height: min(90vh, 680px);
   background: var(--surface);
   border-radius: 24px;
   box-shadow: var(--shadow);
   border: 1px solid rgba(214, 226, 238, 0.9);
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-card form {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  height: 100%;
 }
 
 .modal-header,
@@ -201,6 +211,7 @@ tbody tr:hover {
   justify-content: space-between;
   gap: 1rem;
   padding: 1.25rem 1.35rem;
+  flex-shrink: 0;
 }
 
 .modal-header {
@@ -216,6 +227,7 @@ tbody tr:hover {
   padding: 1.35rem;
   display: grid;
   gap: 1rem;
+  overflow-y: auto;
 }
 
 .field {

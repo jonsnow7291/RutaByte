@@ -163,15 +163,17 @@ function addToCart(productoId) {
       nombre: producto.nombre,
       precio: Number(producto.precio),
       cantidad: 1,
-      notas: null,
+      notas: "",
     });
   }
   renderCarrito();
+  window.RutaByteAuthGuard.saveDraftCart(carrito);
 }
 
 function removeFromCart(productoId) {
   carrito = carrito.filter((c) => c.producto_id !== productoId);
   renderCarrito();
+  window.RutaByteAuthGuard.saveDraftCart(carrito);
 }
 
 function updateQuantity(productoId, delta) {
@@ -183,6 +185,7 @@ function updateQuantity(productoId, delta) {
     return;
   }
   renderCarrito();
+  window.RutaByteAuthGuard.saveDraftCart(carrito);
 }
 
 function renderCarrito() {
@@ -199,12 +202,23 @@ function renderCarrito() {
       const subtotal = item.precio * item.cantidad;
       total += subtotal;
       return `
-        <div class="carrito-item">
-          <div class="carrito-info">
+        <div class="carrito-item" style="border-bottom: 1px solid var(--border-color, #e2e8f0); padding-bottom: 10px; margin-bottom: 10px;">
+          <div class="carrito-info" style="flex: 1;">
             <strong>${escapeHtml(item.nombre)}</strong>
-            <span>${formatPrice(item.precio)} x ${item.cantidad} = ${formatPrice(subtotal)}</span>
+            <div style="font-size: 0.85rem; color: var(--text-muted, #64748b);">${formatPrice(item.precio)} x ${item.cantidad} = ${formatPrice(subtotal)}</div>
+            
+            <!-- Notes input with 150 limit -->
+            <input
+              type="text"
+              class="carrito-item-nota"
+              data-id="${item.producto_id}"
+              placeholder="Nota especial (máx 150 caracteres)"
+              value="${escapeHtml(item.notas || '')}"
+              maxlength="150"
+              style="width: 95%; margin-top: 6px; padding: 4px 8px; font-size: 0.8rem; border: 1px solid #cbd5e1; border-radius: 6px;"
+            />
           </div>
-          <div class="carrito-controls">
+          <div class="carrito-controls" style="display: flex; align-items: center; gap: 8px;">
             <button type="button" class="qty-btn" data-action="minus" data-id="${item.producto_id}">−</button>
             <span>${item.cantidad}</span>
             <button type="button" class="qty-btn" data-action="plus" data-id="${item.producto_id}">+</button>
@@ -239,7 +253,7 @@ async function confirmarPedido() {
     const items = carrito.map((c) => ({
       producto_id: c.producto_id,
       cantidad: c.cantidad,
-      notas: c.notas,
+      notas: c.notas || null,
     }));
 
     await apiRequest(PEDIDOS_URL, {
@@ -250,6 +264,7 @@ async function confirmarPedido() {
     showAlert("Pedido creado correctamente.", "success");
     carrito = [];
     renderCarrito();
+    window.RutaByteAuthGuard.clearDraftCart(); // Clear draft cart upon successful submission!
     await loadMesas();
     await loadPedidos();
   } catch (error) {
@@ -293,8 +308,9 @@ async function loadPedidos() {
     pedidosTableBody.innerHTML = pedidos
       .map((p) => {
         const estado = p.estado || "EN_PREPARACION";
-        const puedeAvanzar = estado !== "ENTREGADO";
+        const puedeAvanzar = estado !== "ENTREGADO" && estado !== "PAGADO" && estado !== "CANCELADO";
         const siguiente = estado === "EN_PREPARACION" ? "Marcar Listo" : estado === "LISTO" ? "Marcar Entregado" : "";
+        const canTransfer = estado !== "PAGADO" && estado !== "CANCELADO";
         return `
           <tr>
             <td>${p.id}</td>
@@ -302,7 +318,16 @@ async function loadPedidos() {
             <td><span class="${ESTADO_CLASSES[estado] || "tag"}">${ESTADO_LABELS[estado] || estado}</span></td>
             <td>${new Date(p.creado_en).toLocaleString("es-CO")}</td>
             <td>
-              ${puedeAvanzar ? `<button class="table-action table-action--success" type="button" data-action="avanzar" data-id="${p.id}">${siguiente}</button>` : '<span class="tag tag--inactive">Finalizado</span>'}
+              <button class="table-action btn-ghost" type="button" data-action="toggle-detalle" data-id="${p.id}">Ver detalles</button>
+              ${puedeAvanzar ? `<button class="table-action table-action--success" type="button" data-action="avanzar" data-id="${p.id}" style="margin-left: 5px;">${siguiente}</button>` : '<span class="tag tag--inactive" style="margin-left: 5px;">Finalizado</span>'}
+              ${canTransfer ? `<button class="table-action" type="button" data-action="open-transferir" data-id="${p.id}" style="margin-left: 5px; background: var(--accent); color: white; border: none; border-radius: 8px; padding: 4px 8px; font-size: 0.8rem; font-weight: bold; cursor: pointer;">Transferir Mesa</button>` : ""}
+            </td>
+          </tr>
+          <tr id="detalle-row-${p.id}" style="display: none; background: var(--surface-soft);">
+            <td colspan="5">
+              <div id="detalle-content-${p.id}" style="padding: 1rem; display: grid; gap: 0.5rem; border: 1px solid var(--border); border-radius: 12px; font-size: 0.9rem;">
+                Cargando detalles...
+              </div>
             </td>
           </tr>
         `;
@@ -325,6 +350,210 @@ async function avanzarEstado(pedidoId) {
   }
 }
 
+async function toggleDetalles(pedidoId) {
+  const row = document.getElementById(`detalle-row-${pedidoId}`);
+  const content = document.getElementById(`detalle-content-${pedidoId}`);
+  
+  if (row.style.display === "none") {
+    row.style.display = "table-row";
+    content.innerHTML = "<div>Cargando detalles...</div>";
+    
+    try {
+      const pedido = await apiRequest(`${PEDIDOS_URL}/${pedidoId}`);
+      if (!pedido.detalles || !pedido.detalles.length) {
+        content.innerHTML = "<div>El pedido no contiene ítems.</div>";
+        return;
+      }
+      
+      let html = `
+        <div style="font-weight: bold; border-bottom: 1px solid var(--border); padding-bottom: 0.5rem; margin-bottom: 0.5rem; display: flex; justify-content: space-between; align-items: center;">
+          <span>Detalle de Ítems (Pedido #${pedidoId})</span>
+          ${parseFloat(pedido.descuento || 0) > 0 ? `<span style="color: #16a34a; font-weight: bold;">Descuento: ${formatPrice(pedido.descuento)} (${pedido.tipo_descuento === 'PORCENTAJE' ? pedido.descuento_valor + '%' : '$' + pedido.descuento_valor})</span>` : ""}
+        </div>
+        <table style="width: 100%; border-collapse: collapse;">
+          <thead>
+            <tr style="text-align: left; font-size: 0.8rem; color: var(--muted); border-bottom: 1px solid var(--border);">
+              <th style="padding: 0.5rem;">PRODUCTO</th>
+              <th style="padding: 0.5rem;">CANTIDAD</th>
+              <th style="padding: 0.5rem;">PRECIO</th>
+              <th style="padding: 0.5rem;">NOTAS</th>
+              <th style="padding: 0.5rem; text-align: right;">ACCIONES</th>
+            </tr>
+          </thead>
+          <tbody>
+      `;
+      
+      pedido.detalles.forEach((d) => {
+        const prod = productosCache.find(p => p.id === d.producto_id);
+        const name = prod ? prod.nombre : `Producto ID ${d.producto_id}`;
+        const canCancelItem = !d.cancelado && pedido.estado !== "PAGADO" && pedido.estado !== "CANCELADO";
+        
+        html += `
+          <tr style="border-bottom: 1px solid rgba(0,0,0,0.05); ${d.cancelado ? 'opacity: 0.5; text-decoration: line-through;' : ''}">
+            <td style="padding: 0.5rem; font-weight: 500;">${escapeHtml(name)}</td>
+            <td style="padding: 0.5rem;">${d.cantidad}</td>
+            <td style="padding: 0.5rem;">${formatPrice(d.precio_unitario)}</td>
+            <td style="padding: 0.5rem; font-style: italic; color: var(--muted);">${escapeHtml(d.notas || '-')}</td>
+            <td style="padding: 0.5rem; text-align: right;">
+              ${canCancelItem ? `<button class="table-action table-action--danger" type="button" data-action="anular-item" data-pedido-id="${pedidoId}" data-detalle-id="${d.id}" style="color: #ef4444; border: 1px solid #ef4444; border-radius: 6px; padding: 2px 6px; font-size: 0.8rem; font-weight: bold; cursor: pointer; background: transparent;">Anular</button>` : ""}
+              ${d.cancelado ? `<span style="color: #ef4444; font-weight: bold; font-size: 0.8rem;">[ANULADO] ${escapeHtml(d.justificacion_cancelacion || '')}</span>` : ""}
+            </td>
+          </tr>
+        `;
+      });
+      
+      html += `
+          </tbody>
+        </table>
+      `;
+      content.innerHTML = html;
+    } catch (error) {
+      content.innerHTML = `<div style="color: #ef4444;">Error al cargar detalles: ${escapeHtml(error.message)}</div>`;
+    }
+  } else {
+    row.style.display = "none";
+  }
+}
+
+async function anularItem(pedidoId, detalleId) {
+  const justificacion = window.prompt("Escriba la justificación detallada para anular este producto:");
+  if (justificacion === null) return; // User cancelled
+  
+  if (!justificacion.trim()) {
+    showAlert("Debe ingresar una justificación escrita válida.");
+    return;
+  }
+  
+  try {
+    await apiRequest(`${PEDIDOS_URL}/${pedidoId}/detalles/${detalleId}/cancelar`, {
+      method: "POST",
+      body: JSON.stringify({ justificacion })
+    });
+    
+    showAlert("Ítem anulado y notificado a cocina.", "success");
+    
+    // Force refresh the expanded details
+    const row = document.getElementById(`detalle-row-${pedidoId}`);
+    row.style.display = "none";
+    await toggleDetalles(pedidoId);
+    await loadPedidos();
+  } catch (error) {
+    showAlert(error.message);
+  }
+}
+
+function openTransferirMesa(pedidoId) {
+  document.getElementById("transferirPedidoId").value = pedidoId;
+  
+  const targetSelect = document.getElementById("mesa_destino_id");
+  targetSelect.innerHTML = '<option value="">Seleccionar mesa libre</option>';
+  
+  const freeMesas = mesasCache.filter(m => m.estado === "LIBRE" && m.activa);
+  if (!freeMesas.length) {
+    showAlert("No hay mesas libres disponibles en tu sede para transferir.");
+    return;
+  }
+  
+  freeMesas.forEach(m => {
+    const opt = document.createElement("option");
+    opt.value = m.id;
+    opt.textContent = m.identificador_mesa;
+    targetSelect.appendChild(opt);
+  });
+  
+  document.getElementById("transferirModal").classList.add("modal--open");
+}
+
+document.getElementById("closeTransferirModalBtn")?.addEventListener("click", () => {
+  document.getElementById("transferirModal").classList.remove("modal--open");
+});
+document.getElementById("cancelTransferirModalBtn")?.addEventListener("click", () => {
+  document.getElementById("transferirModal").classList.remove("modal--open");
+});
+
+document.getElementById("transferirForm")?.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const pedidoId = document.getElementById("transferirPedidoId").value;
+  const mesa_destino_id = document.getElementById("mesa_destino_id").value;
+  
+  try {
+    const response = await apiRequest(`${PEDIDOS_URL}/${pedidoId}/transferir?mesa_destino_id=${mesa_destino_id}`, {
+      method: "POST"
+    });
+    
+    showAlert(response.message, "success");
+    document.getElementById("transferirModal").classList.remove("modal--open");
+    await loadMesas();
+    await loadPedidos();
+  } catch (error) {
+    showAlert(error.message);
+  }
+});
+
+// ── WebSocket notifications ───────────────────────────────────
+
+function showLiveNotification(message) {
+  const toast = document.createElement("div");
+  toast.style.cssText = `
+    position: fixed; top: 20px; right: 20px; background: #0f172a; color: white;
+    padding: 16px 20px; border-radius: 12px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.3);
+    z-index: 100000; max-width: 320px; border-left: 4px solid #3b82f6;
+    font-family: sans-serif; font-size: 0.9rem; line-height: 1.4;
+    animation: rbSlideIn 0.3s ease forwards;
+  `;
+  toast.innerHTML = `
+    <div style="font-weight: bold; margin-bottom: 4px; display: flex; align-items: center; gap: 6px;">
+      🔔 Notificación en Tiempo Real
+    </div>
+    <div>${escapeHtml(message)}</div>
+  `;
+  
+  if (!document.getElementById("rbToastAnimation")) {
+    const animStyle = document.createElement("style");
+    animStyle.id = "rbToastAnimation";
+    animStyle.textContent = `
+      @keyframes rbSlideIn {
+        from { transform: translateX(120%); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+      }
+    `;
+    document.head.appendChild(animStyle);
+  }
+  
+  document.body.appendChild(toast);
+  setTimeout(() => {
+    toast.style.animation = "rbSlideIn 0.3s ease reverse forwards";
+    setTimeout(() => toast.remove(), 300);
+  }, 5000);
+}
+
+function startWebSocket() {
+  const WS_URL = API_BASE_URL.replace(/^http/, "ws") + "/ws/pedidos";
+  const ws = new WebSocket(WS_URL);
+  
+  ws.onmessage = (event) => {
+    try {
+      const data = JSON.parse(event.data);
+      if (["NUEVO_PEDIDO", "CAMBIO_ESTADO_PEDIDO", "ANULACION_ITEM", "TRANSFERENCIA_PEDIDO", "PAGO_PROCESADO"].includes(data.evento)) {
+        showLiveNotification(data.mensaje || `Evento: ${data.evento}`);
+        void loadMesas();
+        void loadPedidos();
+      }
+    } catch (err) {
+      console.error("[WebSocket] Error parsing message:", err);
+    }
+  };
+
+  ws.onclose = () => {
+    console.log("[WebSocket] Connection closed. Retrying in 5 seconds...");
+    setTimeout(startWebSocket, 5000);
+  };
+
+  ws.onerror = (err) => {
+    console.error("[WebSocket] Error occurred:", err);
+  };
+}
+
 // ── Eventos ────────────────────────────────────────────────
 
 productosGrid.addEventListener("click", (e) => {
@@ -342,15 +571,48 @@ pedidoItems.addEventListener("click", (e) => {
   else if (btn.dataset.action === "remove") removeFromCart(id);
 });
 
+// Event listener for note changes
+pedidoItems.addEventListener("input", (e) => {
+  if (e.target.classList.contains("carrito-item-nota")) {
+    const id = Number(e.target.dataset.id);
+    const item = carrito.find((c) => c.producto_id === id);
+    if (item) {
+      item.notas = e.target.value;
+      window.RutaByteAuthGuard.saveDraftCart(carrito); // Instantly save draft cart
+    }
+  }
+});
+
 pedidosTableBody.addEventListener("click", (e) => {
-  const btn = e.target.closest('[data-action="avanzar"]');
+  const btn = e.target.closest("[data-action]");
   if (!btn) return;
-  void avanzarEstado(Number(btn.dataset.id));
+  
+  const action = btn.dataset.action;
+  const id = Number(btn.dataset.id);
+  
+  if (action === "avanzar") {
+    void avanzarEstado(id);
+  } else if (action === "toggle-detalle") {
+    void toggleDetalles(id);
+  } else if (action === "open-transferir") {
+    openTransferirMesa(id);
+  } else if (action === "anular-item") {
+    const pedidoId = Number(btn.dataset.pedidoId);
+    const detalleId = Number(btn.dataset.detalleId);
+    void anularItem(pedidoId, detalleId);
+  }
 });
 
 categoriaFilter.addEventListener("change", renderProductos);
 confirmarBtn.addEventListener("click", confirmarPedido);
 
 if (authToken) {
-  void Promise.all([loadMesas(), loadCategorias(), loadProductos()]).then(() => loadPedidos());
+  // Load draft cart if available!
+  carrito = window.RutaByteAuthGuard.getDraftCart() || [];
+  
+  void Promise.all([loadMesas(), loadCategorias(), loadProductos()]).then(() => {
+    renderCarrito();
+    void loadPedidos();
+    startWebSocket();
+  });
 }

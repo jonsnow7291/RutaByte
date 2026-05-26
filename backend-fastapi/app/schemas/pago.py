@@ -39,6 +39,8 @@ class PagoResponse(BaseModel):
     usuario_id: int
     metodo_pago: str
     monto_total: Decimal
+    subtotal_base: Decimal
+    impuesto_total: Decimal
     monto_efectivo: Decimal | None
     monto_tarjeta: Decimal | None
     referencia: str | None

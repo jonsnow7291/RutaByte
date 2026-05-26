@@ -2,16 +2,18 @@ from __future__ import annotations
 
 import csv
 import io
+import os
+import asyncio
 from datetime import datetime
 from decimal import Decimal
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, BackgroundTasks
 from fastapi.responses import StreamingResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
 from app.dependencies.auth import get_current_cajero
-from app.db.session import get_db
+from app.db.session import get_db, SessionLocal
 from app.models.mesa import Mesa
 from app.models.pago import Pago
 from app.models.pedido import Pedido
@@ -20,6 +22,7 @@ from app.models.inventario import Inventario
 from app.models.producto import Producto
 from app.schemas.reporte import ReporteVentaItem
 from app.services.algoritmos_service import recursividad_simple_suma, recursividad_multiple_fibonacci
+from app.core.notifications import notification_manager
 
 
 router = APIRouter(prefix="/reportes", tags=["reportes"])
@@ -267,3 +270,76 @@ def exportar_reporte_ventas_csv(
     output.seek(0)
     headers = {"Content-Disposition": 'attachment; filename="reporte_ventas.csv"'}
     return StreamingResponse(iter([output.getvalue()]), media_type="text/csv", headers=headers)
+
+
+def _safe_broadcast(message: dict) -> None:
+    try:
+        loop = asyncio.get_running_loop()
+        loop.create_task(notification_manager.broadcast(message))
+    except RuntimeError:
+        pass
+
+
+def generar_reporte_masivo_async(current_user: dict, fecha_inicio: datetime, fecha_fin: datetime, sede_id: int | None, file_name: str) -> None:
+    db = SessionLocal()
+    try:
+        filas = _construir_reporte(db, current_user, fecha_inicio, fecha_fin, sede_id=sede_id)
+
+        # Ensure static/reports exists
+        os.makedirs("static/reports", exist_ok=True)
+        file_path = os.path.join("static/reports", file_name)
+
+        with open(file_path, "w", newline="", encoding="utf-8") as f:
+            writer = csv.writer(f)
+            writer.writerow([
+                "fecha", "sede_id", "sede", "codigo_producto", "producto",
+                "unidades_vendidas", "precio_compra", "precio_venta",
+                "venta_total", "costo_total", "ganancia"
+            ])
+            for fila in filas:
+                writer.writerow([
+                    fila.fecha.isoformat(),
+                    fila.sede_id,
+                    fila.sede,
+                    fila.codigo_producto,
+                    fila.producto,
+                    fila.unidades_vendidas,
+                    str(fila.precio_compra),
+                    str(fila.precio_venta),
+                    str(fila.venta_total),
+                    str(fila.costo_total),
+                    str(fila.ganancia),
+                ])
+
+        # Send WS notification when finished
+        _safe_broadcast({
+            "evento": "REPORTE_MASIVO_COMPLETO",
+            "archivo_url": f"/static/reports/{file_name}",
+            "mensaje": "El reporte global masivo ha sido generado exitosamente."
+        })
+    finally:
+        db.close()
+
+
+@router.post("/masivos")
+def iniciar_reporte_masivo(
+    background_tasks: BackgroundTasks,
+    fecha_inicio: datetime = Query(...),
+    fecha_fin: datetime = Query(...),
+    sede_id: int | None = None,
+    current_user: dict = Depends(get_current_cajero),
+) -> dict:
+    file_name = f"reporte_masivo_{int(datetime.now().timestamp())}.csv"
+    background_tasks.add_task(
+        generar_reporte_masivo_async,
+        current_user,
+        fecha_inicio,
+        fecha_fin,
+        sede_id,
+        file_name
+    )
+    return {
+        "status": "processing",
+        "file_name": file_name,
+        "message": "El reporte global masivo se está procesando en segundo plano.",
+    }

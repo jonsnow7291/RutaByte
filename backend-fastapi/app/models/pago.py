@@ -17,6 +17,8 @@ class Pago(Base):
     usuario_id: Mapped[int] = mapped_column(ForeignKey("USUARIOS.id"), nullable=False)
     metodo_pago: Mapped[str] = mapped_column(String(20), nullable=False)
     monto_total: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
+    subtotal_base: Mapped[Decimal] = mapped_column(Numeric(10, 2), default=0, nullable=False)
+    impuesto_total: Mapped[Decimal] = mapped_column(Numeric(10, 2), default=0, nullable=False)
     monto_efectivo: Mapped[Decimal | None] = mapped_column(Numeric(10, 2), nullable=True)
     monto_tarjeta: Mapped[Decimal | None] = mapped_column(Numeric(10, 2), nullable=True)
     referencia: Mapped[str | None] = mapped_column(String(100), nullable=True)

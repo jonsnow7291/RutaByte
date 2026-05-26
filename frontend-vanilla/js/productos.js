@@ -188,6 +188,7 @@ function renderProductos(productos) {
     const categoria = escapeHtml(getCategoriaNombre(p.categoria_id));
     const costoCompra = formatPrice(p.costo_compra || 0);
     const precio = formatPrice(p.precio);
+    const iva = `${Number(p.impuesto_iva ?? 0)}%`;
     const umbral = Number(p.umbral_minimo ?? 0);
     const desc = escapeHtml(p.descripcion || "-");
     const activo = p.activo ?? true;
@@ -201,6 +202,7 @@ function renderProductos(productos) {
         <td><span class="tag tag--role">${categoria}</span></td>
         <td>${costoCompra}</td>
         <td>${precio}</td>
+        <td>${iva}</td>
         <td>${umbral}</td>
         <td class="desc-cell">${desc}</td>
         <td><span class="${estadoClass}">${estadoText}</span></td>
@@ -246,8 +248,9 @@ async function createProducto(event) {
   const umbral_minimo = Number.parseInt(productoForm.umbral_minimo.value || "0", 10);
   const descripcion = productoForm.descripcion.value.trim() || null;
   const url_imagen = productoForm.url_imagen.value.trim() || null;
+  const impuesto_iva = Number(productoForm.impuesto_iva.value);
 
-  const payload = { nombre, categoria_id, precio, costo_compra, umbral_minimo, descripcion, url_imagen };
+  const payload = { nombre, categoria_id, precio, costo_compra, umbral_minimo, descripcion, url_imagen, impuesto_iva };
 
   try {
     if (editingId) {
@@ -313,11 +316,12 @@ tableBody.addEventListener("click", async (event) => {
     document.getElementById("modalTitle").textContent = "Editar Producto";
     productoForm.nombre.value = producto.nombre || "";
     productoForm.categoria_id.value = producto.categoria_id || "";
-    productoForm.precio.value = producto.precio ?? "";
+    productoForm.precio.value = formatNumberWithDots(String(producto.precio ?? ""));
     productoForm.umbral_minimo.value = producto.umbral_minimo ?? 5;
-    productoForm.costo_compra.value = producto.costo_compra ?? "";
+    productoForm.costo_compra.value = formatNumberWithDots(String(producto.costo_compra ?? ""));
     productoForm.descripcion.value = producto.descripcion || "";
     productoForm.url_imagen.value = producto.url_imagen || "";
+    productoForm.impuesto_iva.value = String(producto.impuesto_iva ?? 19);
 
     openModal(productoModal, "nombre");
   }
@@ -342,3 +346,34 @@ categoriaForm.addEventListener("submit", createCategoria);
 if (authToken) {
   void loadCategorias().then(() => loadProductos());
 }
+
+function formatNumberWithDots(val) {
+  const clean = String(val).replace(/\D/g, "");
+  if (!clean) return "";
+  return clean.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+}
+
+function setupCurrencyInput(input) {
+  if (!input) return;
+  input.type = "text";
+  input.inputMode = "numeric";
+  
+  input.addEventListener("input", (e) => {
+    let cursorPosition = e.target.selectionStart;
+    const originalLength = e.target.value.length;
+    const clean = e.target.value.replace(/\D/g, "");
+    
+    if (clean) {
+      const formatted = clean.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+      e.target.value = formatted;
+      const newLength = e.target.value.length;
+      cursorPosition = cursorPosition + (newLength - originalLength);
+      e.target.setSelectionRange(cursorPosition, cursorPosition);
+    } else {
+      e.target.value = "";
+    }
+  });
+}
+
+setupCurrencyInput(productoForm.precio);
+setupCurrencyInput(productoForm.costo_compra);

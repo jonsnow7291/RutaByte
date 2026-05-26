@@ -26,6 +26,9 @@ class DetalleItemResponse(BaseModel):
     precio_unitario: Decimal
     costo_unitario: Decimal
     notas: str | None
+    cancelado: bool
+    justificacion_cancelacion: str | None
+    cancelado_por: int | None
 
 
 class PedidoResponse(BaseModel):
@@ -35,6 +38,10 @@ class PedidoResponse(BaseModel):
     mesa_id: int
     usuario_id: int
     estado: str
+    descuento: Decimal
+    tipo_descuento: str | None
+    descuento_valor: Decimal
+    descuento_autorizado_por: int | None
     creado_en: datetime
     detalles: list[DetalleItemResponse] = []
 
@@ -47,3 +54,14 @@ class PedidoListResponse(BaseModel):
     usuario_id: int
     estado: str
     creado_en: datetime
+
+
+class PedidoDescuentoApply(BaseModel):
+    tipo_descuento: str = Field(pattern="^(PORCENTAJE|FIJO)$")
+    descuento_valor: Decimal = Field(ge=0)
+    admin_username: str
+    admin_password: str
+
+
+class DetalleItemCancelar(BaseModel):
+    justificacion: str = Field(min_length=1, max_length=255)

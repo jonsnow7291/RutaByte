@@ -12,10 +12,10 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from app.core.security import ALGORITHM, SECRET_KEY
+from app.main import app
+from app.core.security import create_access_token
 from app.db.base import Base
 from app.db.session import get_db
-from app.main import app
 from app.models.mesa import Mesa
 from app.models.rol import Rol
 from app.models.usuario import Usuario
@@ -29,20 +29,14 @@ engine = create_engine(
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
-def _base64url_encode(data: bytes) -> str:
-    return base64.urlsafe_b64encode(data).rstrip(b"=").decode("utf-8")
-
-
 def _build_token(role_id: int = 1) -> str:
-    header = {"alg": ALGORITHM, "typ": "JWT"}
-    payload = {"sub": "admin@test.com", "role_id": role_id}
-
-    header_segment = _base64url_encode(json.dumps(header, separators=(",", ":")).encode("utf-8"))
-    payload_segment = _base64url_encode(json.dumps(payload, separators=(",", ":")).encode("utf-8"))
-    signing_input = f"{header_segment}.{payload_segment}".encode("utf-8")
-    signature = hmac.new(SECRET_KEY.encode("utf-8"), signing_input, hashlib.sha256).digest()
-    signature_segment = _base64url_encode(signature)
-    return f"{header_segment}.{payload_segment}.{signature_segment}"
+    return create_access_token({
+        "sub": "admin@test.com",
+        "correo": "admin@test.com",
+        "usuario_id": 1,
+        "rol_id": role_id,
+        "role_id": role_id
+    })
 
 
 def _override_get_db() -> Generator[Session, None, None]:
@@ -53,7 +47,6 @@ def _override_get_db() -> Generator[Session, None, None]:
         db.close()
 
 
-app.dependency_overrides[get_db] = _override_get_db
 Base.metadata.create_all(bind=engine)
 
 client = TestClient(app)
@@ -62,6 +55,7 @@ admin_headers = {"Authorization": f"Bearer {_build_token()}"}
 
 @pytest.fixture(autouse=True)
 def reset_database() -> None:
+    app.dependency_overrides[get_db] = _override_get_db
     Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
 

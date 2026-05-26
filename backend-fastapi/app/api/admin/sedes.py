@@ -9,7 +9,7 @@ from app.db.session import get_db
 from app.models.mesa import Mesa
 from app.models.sede import Sede
 from app.models.usuario import Usuario
-from app.schemas.sede import SedeCreate, SedeResponse
+from app.schemas.sede import SedeCreate, SedeResponse, SedeUpdate
 
 
 router = APIRouter(
@@ -23,6 +23,21 @@ router = APIRouter(
 def crear_sede(payload: SedeCreate, db: Session = Depends(get_db)) -> Sede:
     sede = Sede(**payload.model_dump())
     db.add(sede)
+    db.commit()
+    db.refresh(sede)
+    return sede
+
+
+@router.put("/{sede_id}", response_model=SedeResponse)
+def actualizar_sede(sede_id: int, payload: SedeUpdate, db: Session = Depends(get_db)) -> Sede:
+    sede = db.get(Sede, sede_id)
+    if sede is None or not sede.activa:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Sede no encontrada")
+
+    updates = payload.model_dump(exclude_unset=True)
+    for field, value in updates.items():
+        setattr(sede, field, value)
+
     db.commit()
     db.refresh(sede)
     return sede

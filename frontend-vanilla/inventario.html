@@ -27,6 +27,9 @@
             <button id="openEntradaModalBtn" class="btn btn-primary" type="button">
               Registrar entrada
             </button>
+            <button id="openSalidaModalBtn" class="btn btn-accent" type="button" style="background: var(--accent); border-color: var(--accent); color: white;">
+              Registrar salida
+            </button>
             <button id="refreshInventarioBtn" class="btn btn-ghost" type="button">
               Actualizar
             </button>
@@ -90,7 +93,7 @@
             <div class="algorithm-controls">
               <div class="field">
                 <label for="algoritmoPresupuesto">Presupuesto de compra</label>
-                <input id="algoritmoPresupuesto" type="number" min="0" step="100" placeholder="Ej. 50000" />
+                <input id="algoritmoPresupuesto" type="text" inputmode="numeric" placeholder="Ej. 50.000" />
               </div>
               <button id="runVorazBtn" class="btn btn-ghost" type="button">Sugerir reabastecimiento</button>
               <button id="runMochilaBtn" class="btn btn-primary" type="button">Optimizar compra</button>
@@ -118,6 +121,31 @@
                   </tr>
                 </thead>
                 <tbody id="inventarioTableBody"></tbody>
+              </table>
+            </div>
+          </section>
+
+          <!-- Admin-only Consolidated Inventory section -->
+          <section class="card-surface" id="consolidadoSection" style="display: none;">
+            <div class="section-heading">
+              <div>
+                <h2>Inventario Consolidado Global</h2>
+                <p>Existencias cruzadas de todos los productos en todas las sedes del sistema.</p>
+              </div>
+            </div>
+            <div class="table-wrap">
+              <table aria-label="Listado de inventario consolidado">
+                <thead>
+                  <tr>
+                    <th>Código</th>
+                    <th>Producto</th>
+                    <th>Sede</th>
+                    <th>Stock</th>
+                    <th>Umbral</th>
+                    <th>Estado</th>
+                  </tr>
+                </thead>
+                <tbody id="consolidadoTableBody"></tbody>
               </table>
             </div>
           </section>
@@ -186,6 +214,48 @@
           <div class="modal-footer">
             <button id="cancelEntradaModalBtn" class="btn btn-ghost" type="button">Cancelar</button>
             <button class="btn btn-primary" type="submit">Guardar entrada</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div id="salidaModal" class="modal" aria-hidden="true">
+      <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="salidaModalTitle">
+        <div class="modal-header">
+          <div>
+            <span class="eyebrow">Salida de inventario</span>
+            <h2 id="salidaModalTitle">Registrar ajuste de salida / mermas</h2>
+          </div>
+          <button id="closeSalidaModalBtn" class="icon-btn" type="button" aria-label="Cerrar modal">
+            &times;
+          </button>
+        </div>
+
+        <form id="salidaForm">
+          <div class="modal-body">
+            <div class="field">
+              <label for="salidaSede">Sede</label>
+              <select id="salidaSede" name="sede_id"></select>
+            </div>
+            <div class="field">
+              <label for="salidaProducto">Producto</label>
+              <select id="salidaProducto" name="producto_id" required>
+                <option value="">Seleccionar producto</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="salidaCantidad">Cantidad</label>
+              <input id="salidaCantidad" name="cantidad" type="number" min="1" step="1" required placeholder="Ej. 5" />
+            </div>
+            <div class="field field--full">
+              <label for="salidaMotivo">Justificación de la salida (Obligatorio)</label>
+              <textarea id="salidaMotivo" name="motivo" rows="3" maxlength="300" required placeholder="Indique la causa de la salida (ej: mermas, vencimiento, rotura)"></textarea>
+            </div>
+          </div>
+
+          <div class="modal-footer">
+            <button id="cancelSalidaModalBtn" class="btn btn-ghost" type="button">Cancelar</button>
+            <button class="btn btn-primary" type="submit" style="background: var(--accent); border-color: var(--accent); color: white;">Guardar salida</button>
           </div>
         </form>
       </div>

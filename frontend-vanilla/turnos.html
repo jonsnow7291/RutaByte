@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>RutaByte | Turnos de Caja</title>
+    <link rel="stylesheet" href="css/styles.css" />
+    <link rel="stylesheet" href="css/sedes.css" />
+    <link rel="stylesheet" href="css/usuarios.css" />
+    <script src="js/auth-guard.js" defer></script>
+    <script src="js/turnos.js" defer></script>
+  </head>
+  <body>
+    <main class="sedes-page">
+      <section class="sedes-shell">
+        <header class="sedes-header">
+          <div>
+            <span class="eyebrow">HU-C06 (Operación Core)</span>
+            <h1>Control de Turnos de Caja</h1>
+            <p>
+              Apertura y cierre de turnos diarios con arqueo de valores y balances auditados.
+            </p>
+          </div>
+
+          <div class="actions-row">
+            <a class="btn btn-ghost" href="dashboard.html">Volver al panel</a>
+          </div>
+        </header>
+
+        <section class="content">
+          <div id="alertSlot" class="alert-slot" aria-live="polite"></div>
+
+          <!-- SHIFT CONTAINER -->
+          <div class="card-surface" id="shiftContainer">
+            <div id="noShiftView" style="display: none; padding: 2rem; text-align: center;">
+              <h3>No tienes un turno de caja abierto</h3>
+              <p style="color: var(--muted); margin-bottom: 1.5rem;">
+                Para poder registrar pedidos y procesar cobros, debes abrir un turno con tu monto inicial.
+              </p>
+              <button id="btnOpenAperturaModal" class="btn btn-primary" type="button">
+                Abrir turno de caja
+              </button>
+            </div>
+
+            <div id="activeShiftView" style="display: none; padding: 1.5rem;">
+              <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 1rem; margin-bottom: 1.5rem;">
+                <div>
+                  <span class="eyebrow" style="background: rgba(34, 197, 94, 0.1); color: #16a34a; border-color: rgba(34, 197, 94, 0.2);">ACTIVO</span>
+                  <h2 style="margin: 0.5rem 0 0;">Turno Abierto</h2>
+                </div>
+                <button id="btnOpenCierreModal" class="btn btn-accent" type="button" style="background: #ef4444; border-color: #ef4444; color: #fff;">
+                  Cerrar turno de caja
+                </button>
+              </div>
+
+              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.5rem;">
+                <article class="summary-card" style="background: var(--surface-soft); padding: 1rem; border-radius: 14px;">
+                  <span class="summary-label" style="display: block; color: var(--muted); font-size: 0.9rem; font-weight: 600; margin-bottom: 0.25rem;">Fecha de apertura</span>
+                  <strong id="lblFechaApertura" style="font-size: 1.1rem; color: var(--text);">-</strong>
+                </article>
+                <article class="summary-card" style="background: var(--surface-soft); padding: 1rem; border-radius: 14px;">
+                  <span class="summary-label" style="display: block; color: var(--muted); font-size: 0.9rem; font-weight: 600; margin-bottom: 0.25rem;">Monto de apertura</span>
+                  <strong id="lblMontoApertura" style="font-size: 1.1rem; color: var(--text);">-</strong>
+                </article>
+                <article class="summary-card" style="background: var(--surface-soft); padding: 1rem; border-radius: 14px;">
+                  <span class="summary-label" style="display: block; color: var(--muted); font-size: 0.9rem; font-weight: 600; margin-bottom: 0.25rem;">Sede asignada</span>
+                  <strong id="lblSede" style="font-size: 1.1rem; color: var(--text);">-</strong>
+                </article>
+              </div>
+
+              <!-- Shift Transactions History -->
+              <div style="margin-top: 2.5rem;">
+                <h3>Transacciones procesadas en este turno</h3>
+                <p style="color: var(--muted); margin-bottom: 1rem;">Historial detallado de los cobros realizados con desglose impositivo.</p>
+                <div class="table-wrap">
+                  <table aria-label="Historial de transacciones del turno">
+                    <thead>
+                      <tr>
+                        <th>Fecha/Hora</th>
+                        <th>Pedido ID</th>
+                        <th>Método</th>
+                        <th>Base Imponible</th>
+                        <th>Impuesto IVA</th>
+                        <th>Monto Total</th>
+                      </tr>
+                    </thead>
+                    <tbody id="transaccionesTableBody">
+                      <tr><td colspan="6" style="text-align: center; color: var(--muted);">Cargando transacciones...</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </section>
+    </main>
+
+    <!-- MODAL APERTURA -->
+    <div id="aperturaModal" class="modal" aria-hidden="true">
+      <div class="modal-card modal-card--sm" role="dialog" aria-modal="true" aria-labelledby="aperturaModalTitle">
+        <div class="modal-header">
+          <div>
+            <span class="eyebrow">Apertura</span>
+            <h2 id="aperturaModalTitle">Abrir Turno</h2>
+          </div>
+          <button id="closeAperturaModalBtn" class="icon-btn" type="button" aria-label="Cerrar modal">&times;</button>
+        </div>
+
+        <form id="aperturaForm">
+          <div class="modal-body">
+            <div class="field">
+              <label for="monto_apertura">Monto inicial en caja ($)</label>
+              <input id="monto_apertura" name="monto_apertura" type="text" required placeholder="Ej. 100.000" />
+              <p style="color: var(--muted); font-size: 0.85rem; margin-top: 0.25rem;">
+                Monto físico en efectivo con el que se inicia la jornada en caja.
+              </p>
+            </div>
+          </div>
+
+          <div class="modal-footer">
+            <button id="cancelAperturaModalBtn" class="btn btn-ghost" type="button">Cancelar</button>
+            <button class="btn btn-primary" type="submit">Iniciar turno</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- MODAL CIERRE -->
+    <div id="cierreModal" class="modal" aria-hidden="true">
+      <div class="modal-card modal-card--sm" role="dialog" aria-modal="true" aria-labelledby="cierreModalTitle">
+        <div class="modal-header">
+          <div>
+            <span class="eyebrow">Cierre y Arqueo</span>
+            <h2 id="cierreModalTitle">Arqueo de Turno</h2>
+          </div>
+          <button id="closeCierreModalBtn" class="icon-btn" type="button" aria-label="Cerrar modal">&times;</button>
+        </div>
+
+        <form id="cierreForm">
+          <div class="modal-body">
+            <div class="field">
+              <label for="monto_cierre_real">Efectivo físico real en caja ($)</label>
+              <input id="monto_cierre_real" name="monto_cierre_real" type="text" required placeholder="Ej. 150.000" />
+              <p style="color: var(--muted); font-size: 0.85rem; margin-top: 0.25rem;">
+                Cuenta todo el efectivo que tienes físicamente en caja.
+              </p>
+            </div>
+
+            <div class="field" id="justificacionField" style="display: none;">
+              <label for="justificacion" style="color: #ef4444; font-weight: bold;">Justificación de descuadre (Obligatorio)</label>
+              <textarea id="justificacion" name="justificacion" rows="3" placeholder="Indique la causa del descuadre detectado en caja..."></textarea>
+              <p style="color: #ef4444; font-size: 0.85rem; margin-top: 0.25rem;">
+                * Se detectó una diferencia con respecto al monto esperado del sistema.
+              </p>
+            </div>
+          </div>
+
+          <div class="modal-footer">
+            <button id="cancelCierreModalBtn" class="btn btn-ghost" type="button">Cancelar</button>
+            <button class="btn btn-primary" type="submit" style="background: #ef4444; border-color: #ef4444; color: #fff;">Confirmar cierre</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </body>
+</html>

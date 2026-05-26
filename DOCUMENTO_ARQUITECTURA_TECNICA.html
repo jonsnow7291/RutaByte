@@ -1,0 +1,1863 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DOCUMENTO DE ARQUITECTURA TECNICA - RutaByte</title>
+  <style>
+    :root {
+      --bg: #f5f7fa;
+      --paper: #ffffff;
+      --surface: #eef2f7;
+      --text: #0f172a;
+      --muted: #64748b;
+      --line: #d6e2ee;
+      --accent: #f97316;
+      --accent-strong: #ea580c;
+      --dark: #1e3a5f;
+      --dark-strong: #0f172a;
+      --blue-soft: #dbeafe;
+      --orange-soft: #ffedd5;
+      --green-soft: #dcfce7;
+      --red-soft: #fee2e2;
+      --shadow: 0 18px 50px rgba(15, 23, 42, 0.10);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      background: radial-gradient(circle at top left, rgba(249, 115, 22, 0.12), transparent 32%),
+        radial-gradient(circle at top right, rgba(30, 58, 95, 0.12), transparent 30%),
+        linear-gradient(180deg, #f9fbfd 0%, var(--bg) 100%);
+      color: var(--text);
+      font-family: "Segoe UI", Arial, sans-serif;
+      line-height: 1.55;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    .print-toolbar {
+      position: fixed;
+      right: 22px;
+      bottom: 22px;
+      z-index: 30;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      padding: 10px;
+      border: 1px solid rgba(214, 226, 238, 0.9);
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.92);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(12px);
+    }
+
+    .print-toolbar button {
+      border: 0;
+      border-radius: 10px;
+      padding: 10px 14px;
+      background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+      color: #ffffff;
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .document {
+      width: min(1120px, calc(100% - 32px));
+      margin: 34px auto;
+      background: var(--paper);
+      border: 1px solid rgba(214, 226, 238, 0.9);
+      border-radius: 20px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .cover {
+      min-height: 1060px;
+      display: grid;
+      align-content: space-between;
+      gap: 48px;
+      padding: 72px;
+      background: linear-gradient(145deg, var(--dark-strong) 0%, var(--dark) 48%, #2d5a8e 100%);
+      color: #f8fafc;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .cover::before {
+      content: "";
+      position: absolute;
+      inset: auto -12% -18% auto;
+      width: 520px;
+      height: 520px;
+      border-radius: 999px;
+      border: 88px solid rgba(249, 115, 22, 0.18);
+    }
+
+    .cover::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background-image: linear-gradient(rgba(255,255,255,0.045) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.045) 1px, transparent 1px);
+      background-size: 36px 36px;
+      mask-image: linear-gradient(180deg, #000 0%, transparent 88%);
+      pointer-events: none;
+    }
+
+    .cover > * {
+      position: relative;
+      z-index: 1;
+    }
+
+    .brand-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 28px;
+      align-items: flex-start;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .brand-mark {
+      width: 74px;
+      height: 74px;
+      display: grid;
+      place-items: center;
+      border-radius: 18px;
+      background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+      color: #ffffff;
+      font-size: 1.8rem;
+      font-weight: 900;
+      letter-spacing: 0;
+      box-shadow: 0 20px 46px rgba(249, 115, 22, 0.28);
+    }
+
+    .brand-copy strong {
+      display: block;
+      font-size: 1.45rem;
+      line-height: 1;
+    }
+
+    .brand-copy span,
+    .cover-label,
+    .meta-card span,
+    .confidentiality span {
+      color: rgba(248, 250, 252, 0.76);
+    }
+
+    .cover-label {
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: 999px;
+      padding: 8px 14px;
+      font-size: 0.78rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    .cover-title {
+      max-width: 820px;
+    }
+
+    .cover-title p {
+      margin: 0 0 16px;
+      color: #fed7aa;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .cover-title h1 {
+      margin: 0;
+      font-size: 4.7rem;
+      line-height: 0.95;
+      letter-spacing: 0;
+    }
+
+    .cover-title h2 {
+      max-width: 720px;
+      margin: 28px 0 0;
+      color: rgba(248, 250, 252, 0.82);
+      font-size: 1.45rem;
+      font-weight: 500;
+      line-height: 1.35;
+    }
+
+    .cover-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    .meta-card,
+    .confidentiality {
+      border: 1px solid rgba(255, 255, 255, 0.13);
+      border-radius: 16px;
+      padding: 18px;
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    .meta-card span {
+      display: block;
+      margin-bottom: 4px;
+      font-size: 0.78rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .meta-card strong {
+      font-size: 1.02rem;
+    }
+
+    .confidentiality {
+      grid-column: 1 / -1;
+      display: grid;
+      gap: 8px;
+      border-color: rgba(249, 115, 22, 0.35);
+    }
+
+    .confidentiality strong {
+      color: #fed7aa;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .confidentiality p {
+      margin: 0;
+      color: rgba(248, 250, 252, 0.82);
+    }
+
+    .page {
+      padding: 52px 64px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .page:last-child {
+      border-bottom: 0;
+    }
+
+    .section-heading {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 18px;
+      align-items: center;
+      margin-bottom: 24px;
+      padding-bottom: 16px;
+      border-bottom: 2px solid var(--surface);
+    }
+
+    .section-number {
+      width: 58px;
+      height: 58px;
+      display: grid;
+      place-items: center;
+      border-radius: 16px;
+      background: linear-gradient(135deg, var(--dark), var(--dark-strong));
+      color: #ffffff;
+      font-size: 1.35rem;
+      font-weight: 900;
+    }
+
+    h2,
+    h3,
+    h4,
+    p {
+      margin-top: 0;
+    }
+
+    h2 {
+      margin-bottom: 4px;
+      color: var(--dark-strong);
+      font-size: 2rem;
+      line-height: 1.12;
+      letter-spacing: 0;
+    }
+
+    h3 {
+      margin: 32px 0 12px;
+      color: var(--dark);
+      font-size: 1.25rem;
+      line-height: 1.2;
+    }
+
+    h4 {
+      margin: 18px 0 8px;
+      color: var(--dark-strong);
+      font-size: 1.02rem;
+    }
+
+    .lead {
+      max-width: 78ch;
+      color: var(--muted);
+      font-size: 1.05rem;
+    }
+
+    .toc {
+      display: grid;
+      gap: 10px;
+      counter-reset: toc;
+    }
+
+    .toc a {
+      display: grid;
+      grid-template-columns: 54px 1fr auto;
+      gap: 14px;
+      align-items: center;
+      padding: 15px 16px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: #ffffff;
+    }
+
+    .toc b {
+      color: var(--accent);
+      font-size: 1.05rem;
+    }
+
+    .toc span {
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    .toc em {
+      color: var(--muted);
+      font-style: normal;
+      font-weight: 700;
+    }
+
+    .info-grid,
+    .two-col,
+    .three-col {
+      display: grid;
+      gap: 16px;
+    }
+
+    .info-grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .two-col {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .three-col {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .box {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 18px;
+      background: #ffffff;
+    }
+
+    .box.soft {
+      background: var(--surface);
+    }
+
+    .box.accent {
+      border-color: #fed7aa;
+      background: var(--orange-soft);
+    }
+
+    .box strong {
+      color: var(--dark-strong);
+    }
+
+    .box p:last-child,
+    .box ul:last-child,
+    .box ol:last-child {
+      margin-bottom: 0;
+    }
+
+    .pill-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 12px 0 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .pill-list li {
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 6px 10px;
+      background: #ffffff;
+      color: var(--dark);
+      font-size: 0.88rem;
+      font-weight: 700;
+    }
+
+    ul,
+    ol {
+      padding-left: 22px;
+    }
+
+    li + li {
+      margin-top: 7px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 18px 0 28px;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      font-size: 0.94rem;
+    }
+
+    th,
+    td {
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--line);
+      vertical-align: top;
+      text-align: left;
+    }
+
+    th {
+      background: var(--dark);
+      color: #ffffff;
+      font-size: 0.82rem;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    tr:last-child td {
+      border-bottom: 0;
+    }
+
+    tbody tr:nth-child(even) td {
+      background: #f8fafc;
+    }
+
+    code,
+    .code {
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 2px 6px;
+      background: #f8fafc;
+      color: #b45309;
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 0.9em;
+    }
+
+    pre {
+      overflow-x: auto;
+      margin: 16px 0 24px;
+      padding: 18px;
+      border: 1px solid #1e293b;
+      border-radius: 14px;
+      background: #0f172a;
+      color: #e2e8f0;
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 0.88rem;
+      line-height: 1.55;
+      white-space: pre-wrap;
+    }
+
+    .architecture-diagram,
+    .deployment-diagram,
+    .sequence {
+      margin: 20px 0 24px;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: linear-gradient(180deg, #ffffff, #f8fafc);
+      padding: 22px;
+    }
+
+    .mermaid-panel {
+      margin: 22px 0 28px;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: #ffffff;
+      overflow: hidden;
+      break-inside: avoid;
+    }
+
+    .mermaid-caption {
+      display: flex;
+      justify-content: space-between;
+      gap: 14px;
+      align-items: center;
+      padding: 12px 16px;
+      background: var(--dark);
+      color: #ffffff;
+      font-weight: 800;
+    }
+
+    .mermaid-caption span {
+      color: #fed7aa;
+      font-size: 0.82rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .mermaid {
+      display: flex;
+      justify-content: center;
+      padding: 18px;
+      overflow-x: auto;
+      background: linear-gradient(180deg, #ffffff, #f8fafc);
+      color: var(--text);
+    }
+
+    .mermaid svg {
+      max-width: 100%;
+      height: auto;
+    }
+
+    .layer-stack {
+      display: grid;
+      gap: 14px;
+    }
+
+    .layer {
+      display: grid;
+      grid-template-columns: 170px 1fr;
+      gap: 16px;
+      align-items: stretch;
+    }
+
+    .layer-title {
+      display: grid;
+      place-items: center;
+      border-radius: 12px;
+      background: var(--dark);
+      color: #ffffff;
+      font-weight: 900;
+      text-align: center;
+    }
+
+    .layer-items {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .node {
+      min-height: 76px;
+      display: grid;
+      align-content: center;
+      gap: 4px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 12px;
+      background: #ffffff;
+      text-align: center;
+    }
+
+    .node strong {
+      color: var(--dark-strong);
+    }
+
+    .node span {
+      color: var(--muted);
+      font-size: 0.84rem;
+    }
+
+    .flow-row {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 12px;
+      align-items: center;
+    }
+
+    .flow-card {
+      min-height: 104px;
+      display: grid;
+      align-content: center;
+      gap: 5px;
+      position: relative;
+      border: 1px solid var(--line);
+      border-radius: 13px;
+      padding: 14px;
+      background: #ffffff;
+      text-align: center;
+    }
+
+    .flow-card:not(:last-child)::after {
+      content: "→";
+      position: absolute;
+      right: -16px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--accent);
+      font-size: 1.35rem;
+      font-weight: 900;
+    }
+
+    .flow-card strong {
+      color: var(--dark-strong);
+    }
+
+    .flow-card span {
+      color: var(--muted);
+      font-size: 0.83rem;
+    }
+
+    .mer-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 18px;
+    }
+
+    .entity {
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: #ffffff;
+      break-inside: avoid;
+    }
+
+    .entity h4 {
+      margin: 0;
+      padding: 10px 12px;
+      background: var(--dark);
+      color: #ffffff;
+      font-size: 0.92rem;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+    }
+
+    .entity ul {
+      margin: 0;
+      padding: 12px 12px 12px 28px;
+      font-size: 0.88rem;
+    }
+
+    .sequence-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .actor {
+      border-radius: 999px;
+      padding: 10px 12px;
+      background: var(--dark);
+      color: #ffffff;
+      font-weight: 800;
+      text-align: center;
+    }
+
+    .sequence-steps {
+      display: grid;
+      gap: 8px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .sequence-steps li {
+      display: grid;
+      grid-template-columns: 42px 1fr;
+      gap: 10px;
+      align-items: start;
+      margin: 0;
+      padding: 10px 12px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #ffffff;
+    }
+
+    .step-number {
+      width: 30px;
+      height: 30px;
+      display: grid;
+      place-items: center;
+      border-radius: 999px;
+      background: var(--orange-soft);
+      color: var(--accent-strong);
+      font-weight: 900;
+    }
+
+    .note {
+      margin: 16px 0;
+      padding: 14px 16px;
+      border-left: 5px solid var(--accent);
+      border-radius: 10px;
+      background: var(--orange-soft);
+      color: #7c2d12;
+    }
+
+    .footer-note {
+      padding: 22px 64px 40px;
+      color: var(--muted);
+      font-size: 0.86rem;
+      text-align: center;
+    }
+
+    @media (max-width: 860px) {
+      .cover,
+      .page {
+        padding: 34px 22px;
+      }
+
+      .cover-title h1 {
+        font-size: 2.7rem;
+      }
+
+      .brand-row,
+      .cover-grid,
+      .info-grid,
+      .two-col,
+      .three-col,
+      .layer,
+      .layer-items,
+      .flow-row,
+      .mer-grid,
+      .sequence-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .flow-card:not(:last-child)::after {
+        content: "↓";
+        right: 50%;
+        top: auto;
+        bottom: -22px;
+        transform: translateX(50%);
+      }
+
+      .flow-card {
+        margin-bottom: 10px;
+      }
+    }
+
+    @media print {
+      @page {
+        size: Letter;
+        margin: 12.7mm;
+      }
+
+      body {
+        background: #ffffff;
+      }
+
+      .print-toolbar {
+        display: none;
+      }
+
+      .document {
+        width: 100%;
+        margin: 0;
+        border: 0;
+        border-radius: 0;
+        box-shadow: none;
+      }
+
+      .cover {
+        height: 254mm;
+        min-height: 0;
+        gap: 12mm;
+        padding: 18mm 16mm;
+        page-break-after: always;
+        border-radius: 0;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+
+      .brand-mark {
+        width: 54px;
+        height: 54px;
+        border-radius: 14px;
+        font-size: 1.35rem;
+      }
+
+      .brand-copy strong {
+        font-size: 1.15rem;
+      }
+
+      .brand-copy span,
+      .cover-label {
+        font-size: 0.72rem;
+      }
+
+      .cover-title h1 {
+        max-width: 165mm;
+        font-size: 34pt;
+        line-height: 1;
+      }
+
+      .cover-title h2 {
+        max-width: 150mm;
+        margin-top: 8mm;
+        font-size: 12pt;
+        line-height: 1.28;
+      }
+
+      .cover-title p {
+        margin-bottom: 5mm;
+        font-size: 8.5pt;
+      }
+
+      .cover-grid {
+        gap: 8px;
+      }
+
+      .meta-card,
+      .confidentiality {
+        border-radius: 12px;
+        padding: 10px 12px;
+      }
+
+      .meta-card span {
+        font-size: 7.5pt;
+      }
+
+      .meta-card strong {
+        font-size: 9.3pt;
+      }
+
+      .confidentiality {
+        gap: 4px;
+      }
+
+      .confidentiality strong,
+      .confidentiality p {
+        font-size: 8.5pt;
+        line-height: 1.35;
+      }
+
+      .cover::before {
+        width: 330px;
+        height: 330px;
+        border-width: 58px;
+      }
+
+      .page {
+        min-height: 254mm;
+        padding: 0;
+        border-bottom: 0;
+        page-break-before: always;
+      }
+
+      .architecture-diagram {
+        margin: 10mm 0 8mm;
+        padding: 8mm;
+        border: 2px solid #0f172a;
+        background: #ffffff;
+      }
+
+      .layer-stack {
+        gap: 5mm;
+      }
+
+      .layer {
+        grid-template-columns: 36mm 1fr;
+        gap: 5mm;
+      }
+
+      .layer-title {
+        border: 1.5px solid #0f172a;
+        background: #ffffff;
+        color: #0f172a;
+        font-size: 10pt;
+      }
+
+      .layer-items {
+        gap: 4mm;
+      }
+
+      .node {
+        min-height: 18mm;
+        border: 1.2px solid #1e3a5f;
+        background: #ffffff;
+        color: #0f172a;
+        padding: 3mm;
+      }
+
+      .node strong {
+        color: #0f172a;
+        font-size: 9.5pt;
+      }
+
+      .node span {
+        color: #334155;
+        font-size: 8pt;
+      }
+
+      .mermaid-panel {
+        border: 1.5px solid #0f172a;
+        background: #ffffff;
+      }
+
+      .mermaid-caption {
+        border-bottom: 1px solid #0f172a;
+        background: #ffffff;
+        color: #0f172a;
+      }
+
+      .mermaid-caption span {
+        color: #7c2d12;
+      }
+
+      .mermaid {
+        background: #ffffff;
+        color: #0f172a;
+      }
+
+      .mermaid svg,
+      .mermaid svg * {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+
+      .section-heading,
+      h3,
+      h4,
+      table,
+      .box,
+      .entity,
+      .architecture-diagram,
+      .deployment-diagram,
+      .sequence,
+      .mermaid-panel {
+        break-inside: avoid;
+      }
+
+      a[href]::after {
+        content: "";
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="print-toolbar" aria-hidden="true">
+    <button type="button" onclick="window.print()">Imprimir / Guardar PDF</button>
+  </div>
+
+  <main class="document">
+    <section class="cover" id="portada">
+      <div class="brand-row">
+        <div class="brand">
+          <div class="brand-mark">RB</div>
+          <div class="brand-copy">
+            <strong>RutaByte</strong>
+            <span>Ingenieria de Sistemas</span>
+          </div>
+        </div>
+        <div class="cover-label">Documento controlado</div>
+      </div>
+
+      <div class="cover-title">
+        <p>Documento de Arquitectura Tecnica</p>
+        <h1>MVP — Plataforma Web de Gestion de Inventarios</h1>
+        <h2>Sistema integral para restaurantes con control de sedes, usuarios, inventario, mesas, pedidos, pagos, auditoria y reportes operativos.</h2>
+      </div>
+
+      <div class="cover-grid">
+        <div class="meta-card">
+          <span>Cliente</span>
+          <strong>Juan Carlos Munoz Vera</strong>
+        </div>
+        <div class="meta-card">
+          <span>Empresa encargada</span>
+          <strong>RutaByte — Ingenieria de Sistemas</strong>
+        </div>
+        <div class="meta-card">
+          <span>Fecha</span>
+          <strong>14 de marzo de 2026</strong>
+        </div>
+        <div class="meta-card">
+          <span>Version</span>
+          <strong>2.0 — Completa</strong>
+        </div>
+        <div class="meta-card">
+          <span>Preparado por</span>
+          <strong>Equipo RutaByte</strong>
+        </div>
+        <div class="meta-card">
+          <span>Integrantes</span>
+          <strong>Kevin Gomez, Juan Diego Chaparro, Maryerifer Castro y Oscar Diaz</strong>
+        </div>
+        <div class="confidentiality">
+          <strong>Clausula de confidencialidad</strong>
+          <p>Este documento contiene informacion tecnica, funcional y estrategica del MVP RutaByte. Su distribucion queda limitada al cliente, al equipo academico evaluador y a los integrantes autorizados del proyecto. Cualquier reproduccion, modificacion o divulgacion requiere aprobacion previa de RutaByte — Ingenieria de Sistemas.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="page" id="contenido">
+      <div class="section-heading">
+        <div class="section-number">TC</div>
+        <div>
+          <h2>Tabla de Contenido</h2>
+          <p class="lead">Indice jerarquico del documento tecnico del MVP.</p>
+        </div>
+      </div>
+      <nav class="toc" aria-label="Tabla de contenido">
+        <a href="#seccion-0"><b>0</b><strong>Introduccion — Contexto de Desarrollo</strong><em>Negocio y objetivos</em></a>
+        <a href="#seccion-1"><b>1</b><strong>Introduccion — Contexto Tecnico (TECASE)</strong><em>Stack y restricciones</em></a>
+        <a href="#seccion-2"><b>2</b><strong>Diagrama de Arquitectura</strong><em>Modelo de capas</em></a>
+        <a href="#seccion-3"><b>3</b><strong>Modelo Entidad-Relacion (MER)</strong><em>Persistencia de datos</em></a>
+        <a href="#seccion-4"><b>4</b><strong>Buenas Practicas de Desarrollo</strong><em>Reglas de ingenieria</em></a>
+        <a href="#seccion-5"><b>5</b><strong>Diagrama de Despliegue</strong><em>Ejecucion local</em></a>
+        <a href="#seccion-6"><b>6</b><strong>Diagramas de Secuencia — Flujos Criticos</strong><em>Login, pedido y cobro</em></a>
+        <a href="#seccion-7"><b>7</b><strong>Diccionario de Terminos Tecnicos</strong><em>Glosario</em></a>
+      </nav>
+    </section>
+
+    <section class="page" id="seccion-0">
+      <div class="section-heading">
+        <div class="section-number">0</div>
+        <div>
+          <h2>Introduccion — Contexto de Desarrollo</h2>
+          <p class="lead">RutaByte se plantea como un MVP operativo para centralizar la gestion diaria de restaurantes y establecimientos con multiples sedes.</p>
+        </div>
+      </div>
+
+      <h3>0.1 El Negocio del Cliente</h3>
+      <p>El cliente requiere una plataforma web que ordene los procesos principales de operacion: administracion de sedes, gestion de personal por roles, control de productos, seguimiento de inventario, atencion de mesas, toma de pedidos, cobro en caja y generacion de reportes. El negocio necesita pasar de flujos dispersos o manuales a una solucion centralizada que preserve trazabilidad, reduzca errores de inventario y permita consultar informacion actualizada por sede.</p>
+
+      <div class="info-grid">
+        <div class="box soft">
+          <strong>Operacion multi-sede</strong>
+          <p>Las sedes comparten catalogo, pero requieren control independiente de mesas, usuarios, existencias y movimientos.</p>
+        </div>
+        <div class="box soft">
+          <strong>Roles diferenciados</strong>
+          <p>Administrador, cajero y mesero acceden a funciones distintas segun su responsabilidad operativa.</p>
+        </div>
+        <div class="box soft">
+          <strong>Trazabilidad comercial</strong>
+          <p>Cada pedido, pago, movimiento y evento sensible debe poder consultarse posteriormente.</p>
+        </div>
+      </div>
+
+      <h3>0.2 Problematica que Resuelve el Sistema</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Problema detectado</th>
+            <th>Solucion tecnologica propuesta</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Inventarios administrados de forma manual, con bajo control de entradas, salidas y umbrales minimos.</td>
+            <td>Modulo de inventario por sede, movimientos auditables y alertas operativas por umbral minimo.</td>
+          </tr>
+          <tr>
+            <td>Pedidos y estados de mesa sin sincronizacion entre meseros y caja.</td>
+            <td>Flujo de pedidos conectado con mesas, detalles de productos, estados operativos y notificaciones por WebSocket.</td>
+          </tr>
+          <tr>
+            <td>Usuarios con permisos no diferenciados o sin control claro de responsabilidades.</td>
+            <td>Autenticacion JWT, control RBAC y rutas separadas para administrador, cajero y mesero.</td>
+          </tr>
+          <tr>
+            <td>Dificultad para consolidar ventas, pagos y reportes por sede.</td>
+            <td>Persistencia relacional con reportes exportables y endpoints analiticos para seguimiento financiero.</td>
+          </tr>
+          <tr>
+            <td>Riesgo de inconsistencias al cambiar precios despues de una venta.</td>
+            <td>Detalle de pedido con valores congelados de precio, costo e impuestos al momento de la operacion.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>0.3 Objetivos del MVP</h3>
+      <div class="two-col">
+        <div class="box">
+          <h4>Objetivos funcionales</h4>
+          <ul>
+            <li>Permitir inicio de sesion seguro para usuarios administradores, cajeros y meseros.</li>
+            <li>Gestionar sedes, usuarios, categorias, productos y mesas desde interfaces web.</li>
+            <li>Registrar inventario por sede y movimientos de entrada o salida.</li>
+            <li>Tomar pedidos asociados a mesas y productos disponibles.</li>
+            <li>Registrar pagos, liberar mesas y consultar reportes operativos.</li>
+          </ul>
+        </div>
+        <div class="box">
+          <h4>Objetivos tecnicos</h4>
+          <ul>
+            <li>Separar frontend, backend y base de datos mediante una arquitectura cliente-servidor.</li>
+            <li>Exponer una API REST documentada automaticamente con FastAPI.</li>
+            <li>Usar SQLAlchemy como capa ORM sobre SQLite para persistencia local del MVP.</li>
+            <li>Implementar seguridad con JWT, Bcrypt y validacion por roles.</li>
+            <li>Incluir pruebas automatizadas de endpoints y reglas criticas con pytest.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="page" id="seccion-1">
+      <div class="section-heading">
+        <div class="section-number">1</div>
+        <div>
+          <h2>Introduccion — Contexto Tecnico (TECASE)</h2>
+          <p class="lead">El MVP se construye sobre tecnologias ligeras, mantenibles y suficientes para una primera version funcional de restaurante e inventario.</p>
+        </div>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Categoria TECASE</th>
+            <th>Definicion para RutaByte</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Tecnologia</td>
+            <td>Frontend HTML5, CSS3 y JavaScript Vanilla; backend Python con FastAPI; persistencia mediante SQLAlchemy ORM.</td>
+          </tr>
+          <tr>
+            <td>Entorno</td>
+            <td>Ejecucion local de desarrollo con Uvicorn en <code>127.0.0.1:8000</code> y frontend estatico en navegador o servidor local.</td>
+          </tr>
+          <tr>
+            <td>Capacidad</td>
+            <td>Operacion multi-rol y multi-sede para volumen academico/MVP, usando SQLite como base de datos local del sistema.</td>
+          </tr>
+          <tr>
+            <td>Alcance</td>
+            <td>Administracion, pedidos, pagos, inventario, auditoria, reportes, recuperacion de acceso y algoritmos academicos.</td>
+          </tr>
+          <tr>
+            <td>Seguridad</td>
+            <td>JWT, Bcrypt, RBAC, expiracion de token, proteccion de rutas frontend y validacion de permisos en backend.</td>
+          </tr>
+          <tr>
+            <td>Estandares</td>
+            <td>API REST, JSON, tipado en Python, Pydantic, SQL relacional, commits semanticos y pruebas con pytest.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>1.1 Decisiones de Arquitectura</h3>
+      <div class="three-col">
+        <div class="box accent">
+          <strong>FastAPI</strong>
+          <p>Permite crear APIs REST con alto rendimiento, validacion automatica, documentacion Swagger y soporte asincrono para WebSockets.</p>
+        </div>
+        <div class="box accent">
+          <strong>JavaScript Vanilla</strong>
+          <p>Reduce dependencias, evita procesos de compilacion y permite un frontend portable para un MVP academico y operativo.</p>
+        </div>
+        <div class="box accent">
+          <strong>SQLAlchemy</strong>
+          <p>Aisla la persistencia mediante modelos declarativos y permite trabajar con SQLite sin acoplar la logica de negocio a sentencias SQL manuales.</p>
+        </div>
+      </div>
+      <div class="two-col">
+        <div class="box">
+          <strong>SQLite</strong>
+          <p>SQLite simplifica la instalacion local, evita dependencias de servidor externo y conserva un modelo relacional suficiente para el alcance del MVP.</p>
+        </div>
+        <div class="box">
+          <strong>Arquitectura desacoplada</strong>
+          <p>La interfaz consume la API mediante <code>fetch</code> y JSON. El backend concentra reglas de negocio, permisos, validacion y persistencia.</p>
+        </div>
+      </div>
+
+      <h3>1.2 Restricciones del Proyecto</h3>
+      <ul>
+        <li>El MVP no incluye aplicacion movil nativa; el acceso se realiza desde navegador web.</li>
+        <li>No se contempla integracion directa con pasarelas de pago reales; el modulo de pagos registra el cobro operativo.</li>
+        <li>No se implementa facturacion electronica tributaria ni integracion contable externa.</li>
+        <li>No se incluye infraestructura cloud productiva ni CI/CD obligatorio dentro del alcance base.</li>
+        <li>No se requiere framework frontend ni sistema de componentes compilado para esta version.</li>
+        <li>Los datos semilla y credenciales de prueba corresponden a entornos de desarrollo y demostracion.</li>
+      </ul>
+    </section>
+
+    <section class="page" id="seccion-2">
+      <div class="section-heading">
+        <div class="section-number">2</div>
+        <div>
+          <h2>Diagrama de Arquitectura</h2>
+          <p class="lead">El sistema opera bajo un modelo de tres capas: presentacion, negocio y persistencia.</p>
+        </div>
+      </div>
+
+      <div class="architecture-diagram">
+        <div class="layer-stack">
+          <div class="layer">
+            <div class="layer-title">Presentacion</div>
+            <div class="layer-items">
+              <div class="node"><strong>HTML5</strong><span>Vistas por modulo</span></div>
+              <div class="node"><strong>CSS3</strong><span>Paleta RutaByte</span></div>
+              <div class="node"><strong>JavaScript</strong><span>Fetch API y localStorage</span></div>
+            </div>
+          </div>
+          <div class="layer">
+            <div class="layer-title">Negocio</div>
+            <div class="layer-items">
+              <div class="node"><strong>FastAPI</strong><span>Routers REST</span></div>
+              <div class="node"><strong>Servicios</strong><span>Inventario y algoritmos</span></div>
+              <div class="node"><strong>Seguridad</strong><span>JWT, Bcrypt, RBAC</span></div>
+            </div>
+          </div>
+          <div class="layer">
+            <div class="layer-title">Persistencia</div>
+            <div class="layer-items">
+              <div class="node"><strong>SQLAlchemy</strong><span>Modelos ORM</span></div>
+              <div class="node"><strong>SQLite</strong><span>Desarrollo local</span></div>
+              <div class="node"><strong>Archivo DB</strong><span>routabyte.db</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="mermaid-panel architecture-mermaid">
+        <div class="mermaid-caption">Diagrama Mermaid de arquitectura <span>Cliente-servidor</span></div>
+        <pre class="mermaid">
+flowchart TB
+  subgraph PRESENTACION["Capa de Presentacion"]
+    UI["Frontend Vanilla\nHTML5 + CSS3 + JavaScript"]
+    Guard["Auth Guard\nlocalStorage + JWT"]
+  end
+
+  subgraph NEGOCIO["Capa de Negocio"]
+    API["FastAPI / Uvicorn\nREST + WebSocket"]
+    Routers["Routers por rol\nAdmin | Cajero | Mesero"]
+    Services["Servicios de dominio\nInventario + Algoritmos"]
+    Security["Seguridad\nJWT + Bcrypt + RBAC"]
+  end
+
+  subgraph PERSISTENCIA["Capa de Persistencia"]
+    ORM["SQLAlchemy ORM"]
+    SQLite[("SQLite\nDesarrollo local")]
+    DBFile[("routabyte.db\nArchivo SQLite")]
+  end
+
+  UI -->|Fetch API / JSON| API
+  Guard -->|Bearer token| API
+  API --> Routers
+  Routers --> Security
+  Routers --> Services
+  Services --> ORM
+  ORM --> SQLite
+  SQLite --> DBFile
+        </pre>
+      </div>
+
+      <h3>Notas tecnicas de comunicacion</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Capa</th>
+            <th>Componente</th>
+            <th>Puerto / medio</th>
+            <th>Responsabilidad</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Presentacion</td>
+            <td>Frontend Vanilla</td>
+            <td><code>http://127.0.0.1:5500</code> o archivo local</td>
+            <td>Renderizar interfaz, ejecutar validaciones visuales y consumir endpoints.</td>
+          </tr>
+          <tr>
+            <td>Negocio</td>
+            <td>FastAPI + Uvicorn</td>
+            <td><code>http://127.0.0.1:8000</code></td>
+            <td>Procesar reglas de negocio, autenticacion, autorizacion y serializacion JSON.</td>
+          </tr>
+          <tr>
+            <td>Tiempo real</td>
+            <td>WebSocket de pedidos</td>
+            <td><code>ws://127.0.0.1:8000/ws/pedidos</code></td>
+            <td>Comunicar cambios de pedidos entre roles operativos.</td>
+          </tr>
+          <tr>
+            <td>Persistencia</td>
+            <td>SQLite</td>
+            <td>Archivo local <code>routabyte.db</code></td>
+            <td>Almacenar datos normalizados, llaves foraneas y transacciones.</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="page" id="seccion-3">
+      <div class="section-heading">
+        <div class="section-number">3</div>
+        <div>
+          <h2>Modelo Entidad-Relacion (MER)</h2>
+          <p class="lead">El modelo de datos del MVP organiza entidades de seguridad, catalogo, operacion, inventario, caja y auditoria.</p>
+        </div>
+      </div>
+
+      <p>El diseno fisico se compone de tablas interconectadas por llaves foraneas. La version implementada contempla entidades base y entidades operativas adicionales para cubrir la gestion real del restaurante.</p>
+
+      <div class="mermaid-panel">
+        <div class="mermaid-caption">Diagrama Mermaid Entidad-Relacion <span>MER fisico</span></div>
+        <pre class="mermaid">
+erDiagram
+  ROLES ||--o{ USUARIOS : asigna
+  SEDES ||--o{ USUARIOS : vincula
+  SEDES ||--o{ MESAS : contiene
+  SEDES ||--o{ INVENTARIO : almacena
+  SEDES ||--o{ TURNOS_CAJA : opera
+  USUARIOS ||--o{ PEDIDOS : toma
+  USUARIOS ||--o{ MOVIMIENTOS_INVENTARIO : registra
+  USUARIOS ||--o{ HISTORIAL_PRECIOS : modifica
+  USUARIOS ||--o{ REGISTROS_AUDITORIA : genera
+  USUARIOS ||--o{ TOKENS_RECUPERACION : solicita
+  USUARIOS ||--o{ TURNOS_CAJA : abre
+  CATEGORIAS ||--o{ PRODUCTOS : clasifica
+  PRODUCTOS ||--o{ INVENTARIO : existe_en
+  PRODUCTOS ||--o{ DETALLE_PEDIDOS : se_vende_en
+  PRODUCTOS ||--o{ HISTORIAL_PRECIOS : audita
+  INVENTARIO ||--o{ MOVIMIENTOS_INVENTARIO : contiene
+  MESAS ||--o{ PEDIDOS : recibe
+  PEDIDOS ||--o{ DETALLE_PEDIDOS : contiene
+  PEDIDOS ||--o{ PAGOS : cobra
+  TURNOS_CAJA ||--o{ PAGOS : agrupa
+
+  ROLES {
+    int id PK
+    string nombre UK
+    boolean activo
+  }
+  SEDES {
+    int id PK
+    string nombre
+    string direccion
+    string ciudad
+    boolean activa
+  }
+  USUARIOS {
+    int id PK
+    int rol_id FK
+    int sede_id FK
+    string nombre
+    string correo UK
+    string hash_contrasena
+  }
+  CATEGORIAS {
+    int id PK
+    string nombre UK
+    boolean activa
+  }
+  PRODUCTOS {
+    int id PK
+    int categoria_id FK
+    string nombre
+    decimal precio
+    decimal costo_compra
+    int umbral_minimo
+    decimal impuesto_iva
+  }
+  INVENTARIO {
+    int id PK
+    int sede_id FK
+    int producto_id FK
+    int stock
+    int umbral_minimo
+  }
+  MOVIMIENTOS_INVENTARIO {
+    int id PK
+    int inventario_id FK
+    int usuario_id FK
+    int cantidad
+    string tipo
+  }
+  MESAS {
+    int id PK
+    int sede_id FK
+    string identificador_mesa
+    string estado
+  }
+  PEDIDOS {
+    int id PK
+    int mesa_id FK
+    int usuario_id FK
+    string estado
+    decimal descuento
+  }
+  DETALLE_PEDIDOS {
+    int id PK
+    int pedido_id FK
+    int producto_id FK
+    int cantidad
+    decimal precio_unitario
+    decimal costo_unitario
+  }
+  PAGOS {
+    int id PK
+    int pedido_id FK
+    int turno_id FK
+    decimal monto_pagado
+    string metodo_pago
+  }
+  TURNOS_CAJA {
+    int id PK
+    int usuario_id FK
+    int sede_id FK
+    decimal monto_inicial
+    decimal monto_final
+    string estado
+  }
+  HISTORIAL_PRECIOS {
+    int id PK
+    int producto_id FK
+    int cambiado_por FK
+    decimal precio_anterior
+    decimal precio_nuevo
+  }
+  REGISTROS_AUDITORIA {
+    int id PK
+    int usuario_id FK
+    string tipo_evento
+    string direccion_ip
+  }
+  TOKENS_RECUPERACION {
+    int id PK
+    int usuario_id FK
+    string token_hash
+    datetime expira_en
+  }
+        </pre>
+      </div>
+
+      <div class="mer-grid">
+        <div class="entity"><h4>ROLES</h4><ul><li>id PK</li><li>nombre UK</li><li>activo</li></ul></div>
+        <div class="entity"><h4>SEDES</h4><ul><li>id PK</li><li>nombre</li><li>direccion</li><li>ciudad</li><li>activa</li></ul></div>
+        <div class="entity"><h4>USUARIOS</h4><ul><li>id PK</li><li>rol_id FK</li><li>sede_id FK</li><li>nombre</li><li>correo UK</li><li>hash_contrasena</li></ul></div>
+        <div class="entity"><h4>CATEGORIAS</h4><ul><li>id PK</li><li>nombre UK</li><li>activa</li></ul></div>
+        <div class="entity"><h4>PRODUCTOS</h4><ul><li>id PK</li><li>categoria_id FK</li><li>nombre</li><li>precio</li><li>costo_compra</li><li>umbral_minimo</li><li>impuesto_iva</li></ul></div>
+        <div class="entity"><h4>INVENTARIO</h4><ul><li>id PK</li><li>sede_id FK</li><li>producto_id FK</li><li>stock</li><li>umbral_minimo</li><li>actualizado_en</li></ul></div>
+        <div class="entity"><h4>MOVIMIENTOS_INVENTARIO</h4><ul><li>id PK</li><li>inventario_id FK</li><li>cantidad</li><li>tipo</li><li>usuario_id FK</li><li>motivo</li></ul></div>
+        <div class="entity"><h4>HISTORIAL_PRECIOS</h4><ul><li>id PK</li><li>producto_id FK</li><li>precio_anterior</li><li>precio_nuevo</li><li>cambiado_por FK</li></ul></div>
+        <div class="entity"><h4>MESAS</h4><ul><li>id PK</li><li>sede_id FK</li><li>identificador_mesa</li><li>estado</li><li>activa</li></ul></div>
+        <div class="entity"><h4>PEDIDOS</h4><ul><li>id PK</li><li>mesa_id FK</li><li>usuario_id FK</li><li>estado</li><li>descuento</li><li>creado_en</li></ul></div>
+        <div class="entity"><h4>DETALLE_PEDIDOS</h4><ul><li>id PK</li><li>pedido_id FK</li><li>producto_id FK</li><li>cantidad</li><li>precio_unitario</li><li>costo_unitario</li><li>notas</li></ul></div>
+        <div class="entity"><h4>PAGOS</h4><ul><li>id PK</li><li>pedido_id FK</li><li>turno_id FK</li><li>monto_pagado</li><li>metodo_pago</li><li>subtotal_base</li><li>impuesto_total</li></ul></div>
+        <div class="entity"><h4>TURNOS_CAJA</h4><ul><li>id PK</li><li>usuario_id FK</li><li>sede_id FK</li><li>monto_inicial</li><li>monto_final</li><li>estado</li></ul></div>
+        <div class="entity"><h4>REGISTROS_AUDITORIA</h4><ul><li>id PK</li><li>usuario_id FK</li><li>tipo_evento</li><li>direccion_ip</li><li>creado_en</li></ul></div>
+        <div class="entity"><h4>TOKENS_RECUPERACION</h4><ul><li>id PK</li><li>usuario_id FK</li><li>token_hash</li><li>expira_en</li><li>usado</li></ul></div>
+      </div>
+
+      <h3>3.1 Relaciones Clave</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Relacion</th>
+            <th>Cardinalidad</th>
+            <th>Regla de negocio</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Roles → Usuarios</td>
+            <td>1:N</td>
+            <td>Un rol puede estar asignado a muchos usuarios; cada usuario mantiene un unico rol operativo.</td>
+          </tr>
+          <tr>
+            <td>Sedes → Usuarios / Mesas / Inventario</td>
+            <td>1:N</td>
+            <td>La sede agrupa operacion local, personal, mesas fisicas y existencias disponibles.</td>
+          </tr>
+          <tr>
+            <td>Categorias → Productos</td>
+            <td>1:N</td>
+            <td>Cada producto pertenece a una categoria activa del catalogo.</td>
+          </tr>
+          <tr>
+            <td>Productos ↔ Sedes mediante Inventario</td>
+            <td>N:N resuelta por tabla intermedia</td>
+            <td>Un producto puede existir en varias sedes y cada sede maneja su propio stock por producto.</td>
+          </tr>
+          <tr>
+            <td>Pedidos → DetallePedidos</td>
+            <td>1:N</td>
+            <td>Un pedido contiene uno o varios productos; el detalle conserva cantidades, precios y notas.</td>
+          </tr>
+          <tr>
+            <td>Pedidos → Pagos</td>
+            <td>1:N</td>
+            <td>Un pedido puede registrar el cobro asociado y conservar datos de caja y metodo de pago.</td>
+          </tr>
+          <tr>
+            <td>Usuarios → Auditoria</td>
+            <td>1:N</td>
+            <td>Los eventos sensibles del sistema quedan ligados al usuario que los genera cuando aplica.</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="page" id="seccion-4">
+      <div class="section-heading">
+        <div class="section-number">4</div>
+        <div>
+          <h2>Buenas Practicas de Desarrollo</h2>
+          <p class="lead">Estas reglas buscan mantener un codigo claro, verificable y coherente durante la evolucion del MVP.</p>
+        </div>
+      </div>
+
+      <h3>4.1 Estandares de Codigo</h3>
+      <ul>
+        <li>Usar nombres descriptivos en espanol o ingles tecnico consistente segun el modulo existente.</li>
+        <li>Definir tipos en funciones Python y usar esquemas Pydantic para entrada y salida de datos.</li>
+        <li>Centralizar reglas de negocio en servicios cuando superen la responsabilidad directa del endpoint.</li>
+        <li>Usar ramas de trabajo por funcionalidad: <code>feature/modulo</code>, <code>fix/incidencia</code> o <code>docs/tema</code>.</li>
+        <li>Redactar commits semanticos: <code>feat:</code>, <code>fix:</code>, <code>docs:</code>, <code>test:</code>, <code>refactor:</code>.</li>
+      </ul>
+
+      <h3>4.2 Estructura de Carpetas</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Directorio</th>
+            <th>Responsabilidad</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td><code>backend-fastapi/app/api/</code></td><td>Routers y endpoints REST organizados por dominio y rol.</td></tr>
+          <tr><td><code>backend-fastapi/app/api/admin/</code></td><td>Endpoints de administracion para sedes, usuarios, productos y auditoria.</td></tr>
+          <tr><td><code>backend-fastapi/app/api/cajero/</code></td><td>Flujos de caja: inventario, pagos y turnos.</td></tr>
+          <tr><td><code>backend-fastapi/app/api/mesero/</code></td><td>Flujos operativos de toma y gestion de pedidos.</td></tr>
+          <tr><td><code>backend-fastapi/app/core/</code></td><td>Seguridad, correo y notificaciones transversales.</td></tr>
+          <tr><td><code>backend-fastapi/app/db/</code></td><td>Base declarativa, sesion SQLAlchemy y seeders.</td></tr>
+          <tr><td><code>backend-fastapi/app/models/</code></td><td>Modelos ORM que representan tablas relacionales.</td></tr>
+          <tr><td><code>backend-fastapi/app/schemas/</code></td><td>Contratos Pydantic para validacion y serializacion.</td></tr>
+          <tr><td><code>backend-fastapi/app/services/</code></td><td>Logica reusable de negocio, inventario y algoritmos.</td></tr>
+          <tr><td><code>backend-fastapi/tests/</code></td><td>Pruebas automatizadas con pytest.</td></tr>
+        </tbody>
+      </table>
+
+      <h3>4.3 Seguridad</h3>
+      <div class="two-col">
+        <div class="box">
+          <ul>
+            <li>Firmar tokens JWT y verificar expiracion en cada operacion protegida.</li>
+            <li>Hash de contrasenas con Bcrypt mediante Passlib.</li>
+            <li>RBAC mediante dependencias de FastAPI por rol.</li>
+            <li>Proteccion de rutas frontend con validacion de token y rol antes de cargar vistas privadas.</li>
+          </ul>
+        </div>
+        <div class="box">
+          <ul>
+            <li>Evitar exponer secretos en el repositorio; usar archivo <code>.env</code>.</li>
+            <li>Registrar eventos de autenticacion y auditoria cuando aplique.</li>
+            <li>Validar entradas con Pydantic antes de persistir datos.</li>
+            <li>Configurar CORS de forma restrictiva para ambientes productivos.</li>
+          </ul>
+        </div>
+      </div>
+
+      <h3>4.4 API REST — Convenciones</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Verbo</th>
+            <th>Uso</th>
+            <th>Ejemplo</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>GET</td><td>Consultar recursos o colecciones.</td><td><code>GET /admin/productos</code></td></tr>
+          <tr><td>POST</td><td>Crear recursos o ejecutar acciones de negocio.</td><td><code>POST /auth/login</code></td></tr>
+          <tr><td>PUT</td><td>Actualizar completamente un recurso.</td><td><code>PUT /admin/usuarios/{id}</code></td></tr>
+          <tr><td>PATCH</td><td>Actualizar parcialmente estado o campos puntuales.</td><td><code>PATCH /mesero/pedidos/{id}</code></td></tr>
+          <tr><td>DELETE</td><td>Eliminar o desactivar recursos cuando el dominio lo permita.</td><td><code>DELETE /admin/sedes/{id}</code></td></tr>
+        </tbody>
+      </table>
+
+      <h3>4.5 Pruebas</h3>
+      <p>La suite automatizada usa <code>pytest</code> y clientes HTTP de prueba para validar salud del backend, alcance por sede y modulos funcionales. La meta de cobertura tecnica para componentes criticos es del 80%, priorizando autenticacion, autorizacion, inventario, pedidos y pagos.</p>
+      <pre>cd backend-fastapi
+pytest -q</pre>
+    </section>
+
+    <section class="page" id="seccion-5">
+      <div class="section-heading">
+        <div class="section-number">5</div>
+        <div>
+          <h2>Diagrama de Despliegue</h2>
+          <p class="lead">El despliegue local separa navegador, servidor API y almacenamiento relacional.</p>
+        </div>
+      </div>
+
+      <div class="deployment-diagram">
+        <div class="flow-row">
+          <div class="flow-card"><strong>Navegador</strong><span>Usuario final</span></div>
+          <div class="flow-card"><strong>Frontend</strong><span>HTML, CSS, JS</span></div>
+          <div class="flow-card"><strong>API FastAPI</strong><span>Puerto 8000</span></div>
+          <div class="flow-card"><strong>ORM</strong><span>SQLAlchemy</span></div>
+          <div class="flow-card"><strong>Base de datos</strong><span>SQLite local</span></div>
+        </div>
+      </div>
+
+      <div class="mermaid-panel">
+        <div class="mermaid-caption">Diagrama Mermaid de despliegue <span>Entorno local</span></div>
+        <pre class="mermaid">
+flowchart LR
+  Browser["Navegador del usuario"] -->|HTTP 5500| Static["Frontend estatico\nfrontend-vanilla"]
+  Static -->|Fetch JSON| FastAPI["FastAPI + Uvicorn\n127.0.0.1:8000"]
+  Static -. WebSocket .-> WS["/ws/pedidos"]
+  FastAPI --> Routers["Routers REST"]
+  FastAPI --> WS
+  Routers --> ORM["SQLAlchemy"]
+  ORM --> SQLite[("SQLite\nroutabyte.db")]
+  FastAPI --> StaticFiles["/static\nuploads y reportes"]
+        </pre>
+      </div>
+
+      <h3>5.1 Pasos para Ejecutar el Proyecto Localmente</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Paso</th>
+            <th>Comando / accion</th>
+            <th>Resultado esperado</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>1</td>
+            <td><code>cd backend-fastapi</code></td>
+            <td>Ubicacion en la carpeta del servidor.</td>
+          </tr>
+          <tr>
+            <td>2</td>
+            <td><code>python -m venv .venv</code> y activar el entorno</td>
+            <td>Entorno virtual Python disponible para dependencias aisladas.</td>
+          </tr>
+          <tr>
+            <td>3</td>
+            <td><code>pip install -r requirements.txt</code></td>
+            <td>FastAPI, SQLAlchemy, pytest y librerias de seguridad instaladas.</td>
+          </tr>
+          <tr>
+            <td>4</td>
+            <td><code>python scripts/seed_initial_data.py</code> y <code>uvicorn app.main:app --reload</code></td>
+            <td>Datos iniciales cargados y API activa en <code>http://127.0.0.1:8000</code>.</td>
+          </tr>
+          <tr>
+            <td>5</td>
+            <td>Abrir <code>frontend-vanilla/index.html</code> o ejecutar <code>python -m http.server 5500</code></td>
+            <td>Interfaz disponible en navegador para iniciar sesion y probar flujos.</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="page" id="seccion-6">
+      <div class="section-heading">
+        <div class="section-number">6</div>
+        <div>
+          <h2>Diagramas de Secuencia — Flujos Criticos</h2>
+          <p class="lead">Los siguientes flujos describen el comportamiento temporal de los procesos mas sensibles del MVP.</p>
+        </div>
+      </div>
+
+      <h3>6.1 Login JWT</h3>
+      <div class="mermaid-panel">
+        <div class="mermaid-caption">Diagrama Mermaid de transaccion <span>Login JWT</span></div>
+        <pre class="mermaid">
+sequenceDiagram
+  autonumber
+  actor Usuario
+  participant Frontend as Frontend Vanilla
+  participant Auth as API Auth
+  participant DB as Base de Datos
+  Usuario->>Frontend: Ingresa correo y contrasena
+  Frontend->>Auth: POST /auth/login
+  Auth->>DB: Buscar usuario por correo
+  DB-->>Auth: Usuario, rol, hash y estado
+  Auth->>Auth: Validar Bcrypt y generar JWT
+  Auth-->>Frontend: access_token + datos del usuario
+  Frontend->>Frontend: Guardar token y rol
+  Frontend-->>Usuario: Redirigir a dashboard permitido
+        </pre>
+      </div>
+      <div class="sequence">
+        <div class="sequence-grid">
+          <div class="actor">Usuario</div>
+          <div class="actor">Frontend</div>
+          <div class="actor">API Auth</div>
+          <div class="actor">Base de Datos</div>
+        </div>
+        <ol class="sequence-steps">
+          <li><span class="step-number">1</span><span>El usuario envia correo y contrasena desde la vista de login.</span></li>
+          <li><span class="step-number">2</span><span>El frontend ejecuta <code>POST /auth/login</code> con datos en JSON.</span></li>
+          <li><span class="step-number">3</span><span>La API busca el usuario, valida estado activo y compara hash Bcrypt.</span></li>
+          <li><span class="step-number">4</span><span>Si las credenciales son validas, se emite JWT con identidad, rol y expiracion.</span></li>
+          <li><span class="step-number">5</span><span>El frontend guarda el token y redirige a la vista permitida por rol.</span></li>
+        </ol>
+      </div>
+
+      <h3>6.2 Toma de Pedido</h3>
+      <div class="mermaid-panel">
+        <div class="mermaid-caption">Diagrama Mermaid de transaccion <span>Toma de pedido</span></div>
+        <pre class="mermaid">
+sequenceDiagram
+  autonumber
+  actor Mesero
+  participant Frontend as Frontend Pedidos
+  participant API as API Mesero
+  participant DB as Base de Datos
+  participant WS as WebSocket Pedidos
+  Mesero->>Frontend: Selecciona mesa y productos
+  Frontend->>API: POST /mesero/pedidos con Bearer JWT
+  API->>API: Validar rol y sede del usuario
+  API->>DB: Crear PEDIDOS y DETALLE_PEDIDOS
+  API->>DB: Actualizar estado de MESA a OCUPADA
+  API->>WS: Publicar cambio operativo
+  WS-->>Frontend: Notificacion de pedido actualizado
+  API-->>Frontend: Pedido creado
+  Frontend-->>Mesero: Confirmacion visual
+        </pre>
+      </div>
+      <div class="sequence">
+        <div class="sequence-grid">
+          <div class="actor">Mesero</div>
+          <div class="actor">Frontend Pedidos</div>
+          <div class="actor">API Mesero</div>
+          <div class="actor">BD / WebSocket</div>
+        </div>
+        <ol class="sequence-steps">
+          <li><span class="step-number">1</span><span>El mesero selecciona una mesa activa y agrega productos del catalogo.</span></li>
+          <li><span class="step-number">2</span><span>El frontend envia el pedido con token Bearer a <code>/mesero/pedidos</code>.</span></li>
+          <li><span class="step-number">3</span><span>La API valida el rol, verifica la sede, crea el pedido y sus detalles.</span></li>
+          <li><span class="step-number">4</span><span>La mesa pasa a estado ocupada y el pedido queda en preparacion.</span></li>
+          <li><span class="step-number">5</span><span>Se notifica el cambio por WebSocket a las vistas operativas conectadas.</span></li>
+        </ol>
+      </div>
+
+      <h3>6.3 Cobro de Pedido</h3>
+      <div class="mermaid-panel">
+        <div class="mermaid-caption">Diagrama Mermaid de transaccion <span>Cobro de pedido</span></div>
+        <pre class="mermaid">
+sequenceDiagram
+  autonumber
+  actor Cajero
+  participant Frontend as Frontend Pagos
+  participant API as API Caja
+  participant DB as Base de Datos
+  participant Reportes as Modulo Reportes
+  Cajero->>Frontend: Selecciona pedido pendiente
+  Frontend->>API: GET detalle del pedido
+  API->>DB: Consultar pedido, detalle, mesa y turno
+  DB-->>API: Datos comerciales del pedido
+  API-->>Frontend: Totales, impuestos y estado
+  Cajero->>Frontend: Confirma metodo y monto
+  Frontend->>API: POST /cajero/pagos
+  API->>DB: Registrar PAGOS y valores contables
+  API->>DB: Liberar MESA y cerrar estado de cobro
+  API->>Reportes: Disponibilizar datos para analitica
+  API-->>Frontend: Comprobante de pago registrado
+  Frontend-->>Cajero: Confirmacion de cobro
+        </pre>
+      </div>
+      <div class="sequence">
+        <div class="sequence-grid">
+          <div class="actor">Cajero</div>
+          <div class="actor">Frontend Pagos</div>
+          <div class="actor">API Caja</div>
+          <div class="actor">BD / Reportes</div>
+        </div>
+        <ol class="sequence-steps">
+          <li><span class="step-number">1</span><span>El cajero consulta pedidos listos o entregados pendientes de cobro.</span></li>
+          <li><span class="step-number">2</span><span>El frontend calcula subtotal, impuestos, descuentos y total mostrado.</span></li>
+          <li><span class="step-number">3</span><span>La API registra el pago, metodo, turno de caja y valores contables.</span></li>
+          <li><span class="step-number">4</span><span>El pedido se marca como cobrado y la mesa queda disponible para nueva atencion.</span></li>
+          <li><span class="step-number">5</span><span>Los reportes financieros incorporan el pago para analisis y exportacion.</span></li>
+        </ol>
+      </div>
+    </section>
+
+    <section class="page" id="seccion-7">
+      <div class="section-heading">
+        <div class="section-number">7</div>
+        <div>
+          <h2>Diccionario de Terminos Tecnicos</h2>
+          <p class="lead">Glosario para mantener homogeneidad de lenguaje entre equipo tecnico, cliente y evaluadores.</p>
+        </div>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Termino</th>
+            <th>Definicion</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>API REST</td><td>Estilo de comunicacion HTTP que expone recursos mediante rutas y verbos como GET, POST, PUT y DELETE.</td></tr>
+          <tr><td>JWT</td><td>JSON Web Token; credencial firmada que transporta identidad, rol y expiracion del usuario autenticado.</td></tr>
+          <tr><td>RBAC</td><td>Control de acceso basado en roles; restringe funciones segun permisos de administrador, cajero o mesero.</td></tr>
+          <tr><td>Bcrypt</td><td>Algoritmo de hashing seguro para almacenar contrasenas sin guardar texto plano.</td></tr>
+          <tr><td>ORM</td><td>Mapeo objeto-relacional que permite operar tablas mediante clases y objetos del lenguaje de programacion.</td></tr>
+          <tr><td>SQLAlchemy</td><td>Libreria Python usada como ORM y capa de acceso a bases de datos relacionales.</td></tr>
+          <tr><td>FastAPI</td><td>Framework Python para construir APIs modernas con validacion y documentacion automatica.</td></tr>
+          <tr><td>Pydantic</td><td>Libreria de validacion de datos usada para esquemas de entrada y salida de la API.</td></tr>
+          <tr><td>ACID</td><td>Propiedades de transacciones: atomicidad, consistencia, aislamiento y durabilidad.</td></tr>
+          <tr><td>CORS</td><td>Mecanismo del navegador que controla que origenes pueden consumir una API.</td></tr>
+          <tr><td>WebSocket</td><td>Canal de comunicacion persistente para recibir cambios en tiempo real sin recargar la pagina.</td></tr>
+          <tr><td>SQLite</td><td>Motor de base de datos embebido, usado para desarrollo local sin servidor externo.</td></tr>
+          <tr><td>MVP</td><td>Producto minimo viable; version funcional con alcance suficiente para validar procesos esenciales.</td></tr>
+          <tr><td>Endpoint</td><td>Ruta especifica de la API que atiende una operacion o recurso.</td></tr>
+        </tbody>
+      </table>
+
+      <div class="note">Fin del Documento de Arquitectura Tecnica del MVP RutaByte — version 2.0 completa.</div>
+    </section>
+
+    <div class="footer-note">RutaByte — Ingenieria de Sistemas. Documento preparado para impresion o exportacion PDF desde navegador.</div>
+  </main>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <script>
+    mermaid.initialize({
+      startOnLoad: true,
+      securityLevel: "loose",
+      theme: "base",
+      themeVariables: {
+        primaryColor: "#eef2f7",
+        primaryTextColor: "#0f172a",
+        primaryBorderColor: "#1e3a5f",
+        lineColor: "#f97316",
+        secondaryColor: "#ffedd5",
+        tertiaryColor: "#ffffff",
+        noteBkgColor: "#ffedd5",
+        noteTextColor: "#7c2d12",
+        actorBkg: "#1e3a5f",
+        actorTextColor: "#ffffff",
+        actorBorder: "#0f172a",
+        activationBkgColor: "#f97316",
+        activationBorderColor: "#ea580c",
+        sequenceNumberColor: "#ffffff",
+        signalColor: "#0f172a",
+        signalTextColor: "#0f172a",
+        labelBoxBkgColor: "#ffffff",
+        labelBoxBorderColor: "#d6e2ee",
+        labelTextColor: "#0f172a",
+        loopTextColor: "#0f172a",
+        entityBkg: "#ffffff",
+        entityBorder: "#1e3a5f",
+        attributeBackgroundColorOdd: "#ffffff",
+        attributeBackgroundColorEven: "#f8fafc"
+      }
+    });
+  </script>
+</body>
+</html>

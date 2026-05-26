@@ -42,3 +42,9 @@ class MovimientoInventarioResponse(BaseModel):
     stock_nuevo: int
     motivo: str | None
     creado_en: datetime
+
+
+class InventarioSalidaCreate(BaseModel):
+    producto_id: int
+    cantidad: int = Field(gt=0)
+    motivo: str = Field(min_length=1, max_length=300)

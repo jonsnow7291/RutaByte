@@ -10,7 +10,7 @@ from app.models.inventario import Inventario
 from app.models.movimiento_inventario import MovimientoInventario
 from app.models.producto import Producto
 from app.models.sede import Sede
-from app.schemas.inventario import InventarioEntradaCreate, InventarioItemResponse, MovimientoInventarioResponse
+from app.schemas.inventario import InventarioEntradaCreate, InventarioItemResponse, MovimientoInventarioResponse, InventarioSalidaCreate
 from app.services.inventario_service import registrar_entrada_inventario
 from app.services.algoritmos_service import algoritmo_voraz_reabastecimiento, algoritmo_mochila
 
@@ -153,3 +153,54 @@ def optimizar_compra_mochila(
     resultado = algoritmo_mochila(productos, presupuesto)
     resultado["sede_id"] = resolved_sede_id
     return resultado
+
+
+@router.post("/salidas", response_model=InventarioItemResponse, status_code=status.HTTP_201_CREATED)
+def crear_salida_inventario(
+    payload: InventarioSalidaCreate,
+    sede_id: int | None = None,
+    current_user: dict = Depends(get_current_cajero),
+    db: Session = Depends(get_db),
+) -> Inventario:
+    resolved_sede_id = _resolver_sede(current_user, sede_id=sede_id)
+    producto = db.get(Producto, payload.producto_id)
+    if producto is None or not producto.activo:
+        raise HTTPException(status_code=400, detail="Producto no valido")
+
+    sede = db.get(Sede, resolved_sede_id)
+    if sede is None or not sede.activa:
+        raise HTTPException(status_code=400, detail="Sede no valida")
+
+    usuario_id = int(current_user.get("usuario_id"))
+    inventario = db.scalar(
+        select(Inventario).where(Inventario.sede_id == resolved_sede_id, Inventario.producto_id == payload.producto_id)
+    )
+
+    if inventario is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No hay inventario registrado para este producto en la sede",
+        )
+
+    if inventario.stock < payload.cantidad:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Stock insuficiente para realizar la salida",
+        )
+
+    stock_anterior = inventario.stock
+    inventario.stock -= payload.cantidad
+
+    movimiento = MovimientoInventario(
+        inventario_id=inventario.id,
+        usuario_id=usuario_id,
+        tipo="SALIDA",
+        cantidad=payload.cantidad,
+        stock_anterior=stock_anterior,
+        stock_nuevo=inventario.stock,
+        motivo=payload.motivo,
+    )
+    db.add(movimiento)
+    db.commit()
+    db.refresh(inventario)
+    return inventario
