@@ -35,7 +35,7 @@ router = APIRouter(
 
 @router.get("/categorias", response_model=list[CategoriaResponse])
 def listar_categorias(db: Session = Depends(get_db)) -> list[Categoria]:
-    stmt = select(Categoria).where(Categoria.activa.is_(True)).order_by(Categoria.nombre.asc())
+    stmt = select(Categoria).order_by(Categoria.activa.desc(), Categoria.nombre.asc())
     return list(db.scalars(stmt).all())
 
 
@@ -76,14 +76,15 @@ def actualizar_categoria(categoria_id: int, payload: CategoriaCreate, db: Sessio
 
 
 @router.delete("/categorias/{categoria_id}")
-def desactivar_categoria(categoria_id: int, db: Session = Depends(get_db)) -> dict[str, str | int]:
+def toggle_categoria(categoria_id: int, db: Session = Depends(get_db)) -> dict[str, str | int]:
     categoria = db.get(Categoria, categoria_id)
-    if categoria is None or not categoria.activa:
+    if categoria is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Categoria no encontrada")
 
-    categoria.activa = False
+    categoria.activa = not categoria.activa
     db.commit()
-    return {"message": "Categoria desactivada correctamente", "id": categoria_id}
+    accion = "activada" if categoria.activa else "desactivada"
+    return {"message": f"Categoria {accion} correctamente", "id": categoria_id}
 
 
 
@@ -127,7 +128,7 @@ def arbol_categorias_productos(db: Session = Depends(get_db)) -> dict:
 
 @router.get("", response_model=list[ProductoResponse])
 def listar_productos(db: Session = Depends(get_db)) -> list[Producto]:
-    stmt = select(Producto).where(Producto.activo.is_(True)).order_by(Producto.nombre.asc())
+    stmt = select(Producto).order_by(Producto.activo.desc(), Producto.nombre.asc())
     return list(db.scalars(stmt).all())
 
 
@@ -184,15 +185,16 @@ def actualizar_producto(
 
 
 @router.delete("/{producto_id}")
-def desactivar_producto(producto_id: int, db: Session = Depends(get_db)) -> dict[str, str | int]:
+def toggle_producto(producto_id: int, db: Session = Depends(get_db)) -> dict[str, str | int]:
     producto = db.get(Producto, producto_id)
-    if producto is None or not producto.activo:
+    if producto is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Producto no encontrado")
 
-    producto.activo = False
+    producto.activo = not producto.activo
     db.commit()
     db.refresh(producto)
-    return {"message": "Producto desactivado correctamente", "id": producto.id}
+    accion = "activado" if producto.activo else "desactivado"
+    return {"message": f"Producto {accion} correctamente", "id": producto.id}
 
 
 @router.post("/{producto_id}/imagen", response_model=ProductoResponse)

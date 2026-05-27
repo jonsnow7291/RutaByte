@@ -61,28 +61,29 @@ def crear_usuario(payload: UsuarioCreate, db: Session = Depends(get_db)) -> Usua
 
 @router.get("", response_model=list[UsuarioResponse])
 def listar_usuarios(db: Session = Depends(get_db)) -> list[Usuario]:
-    stmt = select(Usuario).where(Usuario.activo.is_(True)).order_by(Usuario.nombre.asc())
+    stmt = select(Usuario).order_by(Usuario.activo.desc(), Usuario.nombre.asc())
     return list(db.scalars(stmt).all())
 
 
 @router.delete("/{usuario_id}")
-def desactivar_usuario(
+def toggle_usuario(
     usuario_id: int,
     current_user: dict = Depends(get_current_admin),
     db: Session = Depends(get_db),
 ) -> dict[str, str | int]:
     usuario = db.get(Usuario, usuario_id)
-    if usuario is None or not usuario.activo:
+    if usuario is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Usuario no encontrado")
 
     # Prevent self-deactivation!
-    if int(current_user.get("usuario_id")) == usuario_id:
+    if usuario.activo and int(current_user.get("usuario_id")) == usuario_id:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="No puedes desactivar tu propio usuario administrador",
         )
 
-    usuario.activo = False
+    usuario.activo = not usuario.activo
     db.commit()
     db.refresh(usuario)
-    return {"message": "Usuario desactivado correctamente", "id": usuario.id}
+    accion = "activado" if usuario.activo else "desactivado"
+    return {"message": f"Usuario {accion} correctamente", "id": usuario.id}

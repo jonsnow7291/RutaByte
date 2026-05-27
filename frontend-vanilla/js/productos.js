@@ -117,7 +117,7 @@ async function loadCategorias() {
     const payload = await apiRequest(CATEGORIAS_URL);
     categoriasCache = getList(payload);
     categoriaSelect.innerHTML = '<option value="">Seleccionar categoria</option>';
-    categoriasCache.forEach((c) => {
+    categoriasCache.filter((c) => c.activa ?? true).forEach((c) => {
       const opt = document.createElement("option");
       opt.value = c.id;
       opt.textContent = c.nombre;
@@ -194,7 +194,6 @@ function renderProductos(productos) {
     const activo = p.activo ?? true;
     const estadoClass = activo ? "tag tag--active" : "tag tag--inactive";
     const estadoText = activo ? "Activo" : "Inactivo";
-    const disabledAttr = activo ? "" : "disabled";
 
     return `
       <tr>
@@ -210,8 +209,8 @@ function renderProductos(productos) {
           <button class="table-action" type="button" data-action="edit" data-id="${escapeHtml(id)}">
             Editar
           </button>
-          <button class="table-action" type="button" data-action="deactivate" data-id="${escapeHtml(id)}" ${disabledAttr}>
-            Desactivar
+          <button class="table-action" type="button" data-action="toggle" data-id="${escapeHtml(id)}">
+            ${activo ? "Desactivar" : "Activar"}
           </button>
         </td>
       </tr>
@@ -277,11 +276,13 @@ async function createProducto(event) {
 
 async function deactivateProducto(productoId) {
   if (!authToken) return;
-  if (!window.confirm("Deseas desactivar este producto?")) return;
+  const prod = currentProductos.find((p) => String(p.id ?? p.producto_id) === String(productoId));
+  const activo = prod?.activo ?? true;
+  if (!window.confirm(activo ? "Deseas desactivar este producto?" : "Deseas activar este producto?")) return;
 
   try {
     await apiRequest(`${PRODUCTOS_URL}/${productoId}`, { method: "DELETE" });
-    showAlert("Producto desactivado correctamente.", "success");
+    showAlert(activo ? "Producto desactivado correctamente." : "Producto activado correctamente.", "success");
     await loadProductos();
   } catch (error) {
     showAlert(error.message);
@@ -297,7 +298,7 @@ tableBody.addEventListener("click", async (event) => {
   const id = button.dataset.id;
   if (!id) return;
 
-  if (button.dataset.action === "deactivate") {
+  if (button.dataset.action === "toggle") {
     void deactivateProducto(id);
     return;
   }

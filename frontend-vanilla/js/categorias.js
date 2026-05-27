@@ -75,7 +75,6 @@ function renderCategorias() {
     const activo = c.activa ?? true;
     const estadoClass = activo ? "tag tag--active" : "tag tag--inactive";
     const estadoText = activo ? "Activa" : "Inactiva";
-    const disabledAttr = activo ? "" : "disabled";
     return `
       <tr>
         <td>${c.id}</td>
@@ -83,7 +82,7 @@ function renderCategorias() {
         <td><span class="${estadoClass}">${estadoText}</span></td>
         <td>
           <button class="table-action" type="button" data-action="edit" data-id="${c.id}">Editar</button>
-          <button class="table-action" type="button" data-action="deactivate" data-id="${c.id}" ${disabledAttr}>Desactivar</button>
+          <button class="table-action" type="button" data-action="toggle" data-id="${c.id}">${activo ? "Desactivar" : "Activar"}</button>
         </td>
       </tr>
     `;
@@ -128,10 +127,12 @@ async function saveCategoria(event) {
 }
 
 async function deactivateCategoria(id) {
-  if (!window.confirm("¿Deseas deactivar esta categoría? Todos los productos asociados ocultarán su categoría.")) return;
+  const cat = categoriasCache.find((c) => String(c.id) === String(id));
+  const activa = cat?.activa ?? true;
+  if (!window.confirm(activa ? "¿Deseas desactivar esta categoría? Todos los productos asociados ocultarán su categoría." : "¿Deseas activar esta categoría?")) return;
   try {
     await apiRequest(`${CATEGORIAS_URL}/${id}`, { method: "DELETE" });
-    showAlert("Categoría desactivada correctamente.", "success");
+    showAlert(activa ? "Categoría desactivada correctamente." : "Categoría activada correctamente.", "success");
     await loadCategorias();
   } catch (error) {
     showAlert(error.message);
@@ -144,7 +145,7 @@ tableBody.addEventListener("click", async (event) => {
   const id = button.dataset.id;
   if (!id) return;
 
-  if (button.dataset.action === "deactivate") {
+  if (button.dataset.action === "toggle") {
     void deactivateCategoria(id);
   } else if (button.dataset.action === "edit") {
     const cat = categoriasCache.find((c) => String(c.id) === String(id));

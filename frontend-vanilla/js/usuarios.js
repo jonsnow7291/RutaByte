@@ -105,13 +105,14 @@ function getList(payload) {
 }
 
 let sedesCache = [];
+let usuariosCache = [];
 
 async function loadSedes() {
   try {
     const payload = await apiRequest(SEDES_URL);
     sedesCache = getList(payload);
     sedeSelect.innerHTML = '<option value="">Sin sede</option>';
-    sedesCache.forEach((s) => {
+    sedesCache.filter((s) => s.activa ?? true).forEach((s) => {
       const opt = document.createElement("option");
       opt.value = s.id;
       opt.textContent = s.nombre;
@@ -155,7 +156,6 @@ function renderUsuarios(usuarios) {
     const activo = u.activo ?? true;
     const estadoClass = activo ? "tag tag--active" : "tag tag--inactive";
     const estadoText = activo ? "Activo" : "Inactivo";
-    const disabledAttr = activo ? "" : "disabled";
 
     return `
       <tr>
@@ -168,11 +168,10 @@ function renderUsuarios(usuarios) {
           <button
             class="table-action"
             type="button"
-            data-action="deactivate"
+            data-action="toggle"
             data-id="${escapeHtml(id)}"
-            ${disabledAttr}
           >
-            Desactivar
+            ${activo ? "Desactivar" : "Activar"}
           </button>
         </td>
       </tr>
@@ -193,7 +192,8 @@ async function loadUsuarios() {
       </tr>
     `;
     const payload = await apiRequest(USUARIOS_URL);
-    renderUsuarios(getList(payload));
+    usuariosCache = getList(payload);
+    renderUsuarios(usuariosCache);
   } catch (error) {
     renderEmptyState();
     showAlert(error.message);
@@ -226,11 +226,13 @@ async function createUsuario(event) {
 
 async function deactivateUsuario(usuarioId) {
   if (!authToken) return;
-  if (!window.confirm("Deseas desactivar este usuario?")) return;
+  const usuario = usuariosCache.find((u) => String(u.id ?? u.usuario_id) === String(usuarioId));
+  const activo = usuario?.activo ?? true;
+  if (!window.confirm(activo ? "Deseas desactivar este usuario?" : "Deseas activar este usuario?")) return;
 
   try {
     await apiRequest(`${USUARIOS_URL}/${usuarioId}`, { method: "DELETE" });
-    showAlert("Usuario desactivado correctamente.", "success");
+    showAlert(activo ? "Usuario desactivado correctamente." : "Usuario activado correctamente.", "success");
     await loadUsuarios();
   } catch (error) {
     showAlert(error.message);
@@ -238,7 +240,7 @@ async function deactivateUsuario(usuarioId) {
 }
 
 tableBody.addEventListener("click", (event) => {
-  const button = event.target.closest('[data-action="deactivate"]');
+  const button = event.target.closest('[data-action="toggle"]');
   if (!button) return;
   const id = button.dataset.id;
   if (id) void deactivateUsuario(id);

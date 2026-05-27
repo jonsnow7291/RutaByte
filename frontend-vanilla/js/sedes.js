@@ -16,6 +16,7 @@ const cancelModalBtn = document.getElementById("cancelModalBtn");
 const authToken = window.RutaByteAuthGuard?.requireAuth?.();
 
 let currentEditingSedeId = null;
+let sedesCache = [];
 
 function getToken() {
   return authToken;
@@ -110,10 +111,9 @@ function renderSedes(sedes) {
     const nombre = escapeHtml(sede.nombre ?? sede.name ?? "-");
     const direccion = escapeHtml(sede.direccion ?? sede.address ?? "-");
     const ciudad = escapeHtml(sede.ciudad ?? sede.city ?? "-");
-    const activa = sede.activa ?? sede.activa ?? true;
+    const activa = sede.activa ?? true;
     const estadoClass = activa ? "tag tag--active" : "tag tag--inactive";
     const estadoText = activa ? "Activa" : "Inactiva";
-    const disabledAttr = activa ? "" : "disabled";
 
     return `
       <tr>
@@ -137,11 +137,10 @@ function renderSedes(sedes) {
             <button
               class="table-action"
               type="button"
-              data-action="deactivate"
+              data-action="toggle"
               data-id="${escapeHtml(sedeId)}"
-              ${disabledAttr}
             >
-              Desactivar
+              ${activa ? "Desactivar" : "Activar"}
             </button>
           </div>
         </td>
@@ -207,7 +206,8 @@ async function loadSedes() {
     `;
 
     const payload = await apiRequest(API_URL);
-    renderSedes(getSedesList(payload));
+    sedesCache = getSedesList(payload);
+    renderSedes(sedesCache);
   } catch (error) {
     renderEmptyState();
     showAlert(error.message);
@@ -254,7 +254,9 @@ async function deactivateSede(sedeId) {
     return;
   }
 
-  if (!window.confirm("Deseas desactivar esta sede?")) {
+  const sede = sedesCache.find((s) => String(s.id ?? s.sede_id ?? s.ID) === String(sedeId));
+  const activa = sede?.activa ?? true;
+  if (!window.confirm(activa ? "Deseas desactivar esta sede?" : "Deseas activar esta sede?")) {
     return;
   }
 
@@ -263,7 +265,7 @@ async function deactivateSede(sedeId) {
       method: "DELETE",
     });
 
-    showAlert("Sede desactivada correctamente.", "success");
+    showAlert(sede?.activa ? "Sede desactivada correctamente." : "Sede activada correctamente.", "success");
     await loadSedes();
   } catch (error) {
     showAlert(error.message);
@@ -271,9 +273,9 @@ async function deactivateSede(sedeId) {
 }
 
 tableBody.addEventListener("click", (event) => {
-  const deactivateBtn = event.target.closest('[data-action="deactivate"]');
-  if (deactivateBtn) {
-    const sedeId = deactivateBtn.dataset.id;
+  const toggleBtn = event.target.closest('[data-action="toggle"]');
+  if (toggleBtn) {
+    const sedeId = toggleBtn.dataset.id;
     if (sedeId) {
       void deactivateSede(sedeId);
     }
