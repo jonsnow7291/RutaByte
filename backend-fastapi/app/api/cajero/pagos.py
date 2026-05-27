@@ -13,6 +13,7 @@ from app.db.session import get_db
 from app.models.mesa import Mesa
 from app.models.pago import Pago
 from app.models.pedido import Pedido
+from app.models.sede import Sede
 from app.models.usuario import Usuario
 from app.models.turno_caja import TurnoCaja
 from app.schemas.pago import PagoCreate, PagoResponse, PedidoPendienteCobroResponse
@@ -63,6 +64,13 @@ def _mesa_de_pedido(db: Session, pedido: Pedido | None) -> Mesa | None:
     return db.get(Mesa, pedido.mesa_id)
 
 
+def _sede_nombre(db: Session, sede_id: int | None) -> str | None:
+    if sede_id is None:
+        return None
+    sede = db.get(Sede, sede_id)
+    return sede.nombre if sede else None
+
+
 def _serializar_pago(db: Session, pago: Pago) -> dict:
     pedido = pago.pedido
     mesa = _mesa_de_pedido(db, pedido)
@@ -82,6 +90,7 @@ def _serializar_pago(db: Session, pago: Pago) -> dict:
         "mesa_id": mesa.id if mesa else None,
         "mesa_nombre": mesa.identificador_mesa if mesa else None,
         "sede_id": mesa.sede_id if mesa else None,
+        "sede_nombre": _sede_nombre(db, mesa.sede_id if mesa else None),
     }
 
 
@@ -108,6 +117,7 @@ def listar_pedidos_pendientes(
                 mesa_id=pedido.mesa_id,
                 mesa_nombre=mesa.identificador_mesa if mesa else None,
                 sede_id=mesa.sede_id if mesa else None,
+                sede_nombre=_sede_nombre(db, mesa.sede_id if mesa else None),
                 usuario_id=pedido.usuario_id,
                 estado=pedido.estado,
                 total=final_total,
@@ -148,26 +158,8 @@ def procesar_pago(
     db: Session = Depends(get_db),
 ) -> dict:
     usuario_id = int(current_user.get("usuario_id"))
+    role_id = int(current_user.get("rol_id", current_user.get("role_id")))
     sede_id = current_user.get("sede_id")
-
-    if sede_id is None:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="El usuario no tiene una sede asignada",
-        )
-
-    # Enforce shift restriction: Cajero must have an open shift in this sede
-    shift_stmt = select(TurnoCaja).where(
-        TurnoCaja.usuario_id == usuario_id,
-        TurnoCaja.sede_id == int(sede_id),
-        TurnoCaja.estado == "ABIERTO",
-    )
-    shift = db.scalar(shift_stmt)
-    if shift is None:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="No se pueden registrar pagos sin un turno de caja abierto",
-        )
 
     stmt = select(Pedido).options(selectinload(Pedido.detalles)).where(Pedido.id == payload.pedido_id)
     pedido = db.scalar(stmt)
@@ -175,6 +167,29 @@ def procesar_pago(
         raise HTTPException(status_code=404, detail="Pedido no encontrado")
 
     _pedido_permitido(pedido, current_user, db)
+
+    if role_id != 1:
+        if sede_id is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="El usuario no tiene una sede asignada",
+            )
+
+        # Enforce shift restriction: Cajero must have an open shift in this sede
+        shift_stmt = select(TurnoCaja).where(
+            TurnoCaja.usuario_id == usuario_id,
+            TurnoCaja.sede_id == int(sede_id),
+            TurnoCaja.estado == "ABIERTO",
+        )
+        shift = db.scalar(shift_stmt)
+        if shift is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="No se pueden registrar pagos sin un turno de caja abierto",
+            )
+    else:
+        mesa = db.get(Mesa, pedido.mesa_id)
+        sede_id = mesa.sede_id if mesa else 0
 
     if pedido.estado == "PAGADO":
         raise HTTPException(status_code=400, detail="El pedido ya fue pagado")

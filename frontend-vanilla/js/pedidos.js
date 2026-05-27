@@ -68,7 +68,7 @@ async function apiRequest(url, options = {}) {
 
   if (!response.ok) {
     const message =
-      (payload && typeof payload === "object" && (payload.detail || payload.message)) ||
+      (payload && typeof payload === "object" && (Array.isArray(payload.detail) ? payload.detail.map(d => d.msg).join("; ") : (payload.detail || payload.message))) ||
       `Error HTTP ${response.status}`;
     throw new Error(message);
   }

@@ -49,6 +49,7 @@ class PagoResponse(BaseModel):
     mesa_id: int | None = None
     mesa_nombre: str | None = None
     sede_id: int | None = None
+    sede_nombre: str | None = None
 
 
 class PedidoPendienteCobroResponse(BaseModel):
@@ -56,6 +57,7 @@ class PedidoPendienteCobroResponse(BaseModel):
     mesa_id: int
     mesa_nombre: str | None = None
     sede_id: int | None = None
+    sede_nombre: str | None = None
     usuario_id: int
     estado: str
     total: Decimal

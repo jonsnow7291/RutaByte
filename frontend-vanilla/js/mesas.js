@@ -87,7 +87,7 @@ async function apiRequest(url, options = {}) {
 
   if (!response.ok) {
     const message =
-      (payload && typeof payload === "object" && (payload.detail || payload.message || payload.error)) ||
+      (payload && typeof payload === "object" && (Array.isArray(payload.detail) ? payload.detail.map(d => d.msg).join("; ") : (payload.detail || payload.message || payload.error))) ||
       (typeof payload === "string" && payload.trim()) ||
       `La API respondio con error HTTP ${response.status}.`;
     throw new Error(message);
@@ -131,42 +131,28 @@ function getSedeNombre(sedeId) {
 
 function renderEmptyState() {
   tableBody.innerHTML = `
-    <tr><td class="empty-state" colspan="4">No hay mesas registradas todavia.</td></tr>
+    <tr><td class="empty-state" colspan="5">No hay mesas registradas todavia.</td></tr>
   `;
 }
 
 function renderMesas(mesas) {
   if (!mesas.length) {
     renderEmptyState();
-    return `
-        <tr>
-            <td>${escapeHtml(getSedeNombre(m.sede_id))}</td>
-            <td>${identificador}</td>
-            <td><span class="tag tag--role">${estado}</span></td>
-            <td><span class="${estadoClass}">${estadoActivo}</span></td>
-            <td>
-            <button class="table-action" type="button" data-action="edit" data-id="${id}">
-                Editar
-            </button>
-            <button class="table-action" type="button" data-action="deactivate" data-id="${id}" ${disabledAttr}>
-                Desactivar
-            </button>
-            </td>
-        </tr>
-        `;
+    return;
   }
 
   const rows = mesas.map((m) => {
     const id = m.id;
+    const sedeNombre = escapeHtml(getSedeNombre(m.sede_id));
     const identificador = escapeHtml(m.identificador_mesa || m.numero || m.nombre || `Mesa ${id}`);
     const estado = escapeHtml(m.estado || "LIBRE");
     const activo = m.activa ?? m.activo ?? true;
     const estadoActivo = activo ? "Activa" : "Inactiva";
     const estadoClass = activo ? "tag tag--active" : "tag tag--inactive";
-    const disabledAttr = activo ? "" : "disabled";
 
     return `
       <tr>
+        <td>${sedeNombre}</td>
         <td>${identificador}</td>
         <td><span class="tag tag--role">${estado}</span></td>
         <td><span class="${estadoClass}">${estadoActivo}</span></td>
@@ -174,8 +160,8 @@ function renderMesas(mesas) {
           <button class="table-action" type="button" data-action="edit" data-id="${id}">
             Editar
           </button>
-          <button class="table-action" type="button" data-action="deactivate" data-id="${id}" ${disabledAttr}>
-            Desactivar
+          <button class="table-action" type="button" data-action="toggle" data-id="${id}">
+            ${activo ? "Desactivar" : "Activar"}
           </button>
         </td>
       </tr>
@@ -190,7 +176,7 @@ async function loadMesas() {
   if (!authToken) return;
 
   try {
-    tableBody.innerHTML = `<tr><td class="empty-state" colspan="4">Cargando mesas...</td></tr>`;
+    tableBody.innerHTML = `<tr><td class="empty-state" colspan="5">Cargando mesas...</td></tr>`;
     const payload = await apiRequest(MESAS_URL);
     const lista = getList(payload);
     currentMesas = lista;
@@ -234,13 +220,15 @@ async function saveMesa(event) {
   }
 }
 
-async function deactivateMesa(mesaId) {
+async function toggleMesa(mesaId) {
   if (!authToken) return;
-  if (!window.confirm("Deseas desactivar esta mesa?")) return;
+  const mesa = currentMesas.find((m) => String(m.id) === String(mesaId));
+  const activo = mesa?.activa ?? mesa?.activo ?? true;
+  if (!window.confirm(activo ? "Deseas desactivar esta mesa?" : "Deseas activar esta mesa?")) return;
 
   try {
     await apiRequest(`${MESAS_URL}/${mesaId}`, { method: "DELETE" });
-    showAlert("Mesa desactivada correctamente.", "success");
+    showAlert(activo ? "Mesa desactivada correctamente." : "Mesa activada correctamente.", "success");
     await loadMesas();
   } catch (error) {
     showAlert(error.message);
@@ -254,8 +242,8 @@ tableBody.addEventListener("click", (event) => {
   const id = button.dataset.id;
   if (!id) return;
 
-  if (button.dataset.action === "deactivate") {
-    void deactivateMesa(id);
+  if (button.dataset.action === "toggle") {
+    void toggleMesa(id);
     return;
   }
 

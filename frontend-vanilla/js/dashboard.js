@@ -54,7 +54,7 @@ function applyRoleUi() {
     if (adminAuditoriaTile) adminAuditoriaTile.style.display = "none";
   }
 
-  if (roleId !== 3) {
+  if (roleId !== 3 && roleId !== 1) {
     if (meseroTile) meseroTile.style.display = "none";
   }
 

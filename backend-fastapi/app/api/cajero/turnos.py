@@ -123,8 +123,17 @@ def obtener_turno_activo(
     current_user: dict = Depends(get_current_cajero),
     db: Session = Depends(get_db),
 ) -> TurnoCaja:
+    role_id = int(current_user.get("rol_id", current_user.get("role_id")))
     usuario_id = int(current_user.get("usuario_id"))
     sede_id = current_user.get("sede_id")
+
+    if role_id == 1 and sede_id is None:
+        dummy = TurnoCaja(id=0, usuario_id=usuario_id, sede_id=0, monto_apertura=0, estado="ADMIN_BYPASS", fecha_apertura=datetime.now())
+        dummy.fecha_cierre = None
+        dummy.monto_cierre_real = None
+        dummy.monto_cierre_esperado = None
+        dummy.justificacion = None
+        return dummy
 
     if sede_id is None:
         raise HTTPException(

@@ -91,7 +91,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       if (!response.ok) {
         throw new Error(
-          payload.detail || payload.message || "No fue posible iniciar sesion."
+          (Array.isArray(payload.detail) ? payload.detail.map(d => d.msg).join("; ") : (payload.detail || payload.message)) || "No fue posible iniciar sesion."
         );
       }
 

@@ -85,11 +85,17 @@ async function apiRequest(url, options = {}) {
   const payload = await parseResponse(response);
 
   if (!response.ok) {
-    const message =
-      (payload && typeof payload === "object" && (payload.detail || payload.message || payload.error)) ||
-      (typeof payload === "string" && payload.trim()) ||
-      `La API respondio con error HTTP ${response.status}.`;
-    throw new Error(message);
+    let message;
+    if (payload && typeof payload === "object") {
+      if (Array.isArray(payload.detail)) {
+        message = payload.detail.map((d) => d.msg).join("; ");
+      } else {
+        message = payload.detail || payload.message || payload.error;
+      }
+    } else if (typeof payload === "string" && payload.trim()) {
+      message = payload.trim();
+    }
+    throw new Error(message || `La API respondio con error HTTP ${response.status}.`);
   }
 
   return payload;

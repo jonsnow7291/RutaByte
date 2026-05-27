@@ -194,7 +194,7 @@ aperturaForm.addEventListener("submit", async (e) => {
 
     if (!response.ok) {
       const err = await response.json();
-      throw new Error(err.detail || "Error al abrir el turno");
+      throw new Error(Array.isArray(err.detail) ? err.detail.map(d => d.msg).join("; ") : (err.detail || "Error al abrir el turno"));
     }
 
     aperturaForm.reset();
@@ -237,7 +237,7 @@ cierreForm.addEventListener("submit", async (e) => {
 
     if (!response.ok) {
       const err = await response.json();
-      throw new Error(err.detail || "Error al cerrar el turno");
+      throw new Error(Array.isArray(err.detail) ? err.detail.map(d => d.msg).join("; ") : (err.detail || "Error al cerrar el turno"));
     }
 
     cierreForm.reset();

@@ -56,7 +56,7 @@ def listar_mesas(
     db: Session = Depends(get_db),
 ) -> list[dict]:
     role_id = int(current_user.get("rol_id", current_user.get("role_id", 0)))
-    stmt = select(Mesa).where(Mesa.activa.is_(True))
+    stmt = select(Mesa)
 
     # Admin ve todas las mesas. Mesero y cajero solo ven las mesas de su sede.
     if role_id != 1:
@@ -65,9 +65,9 @@ def listar_mesas(
             return []
         stmt = stmt.where(Mesa.sede_id == int(user_sede_id))
 
-    stmt = stmt.order_by(Mesa.sede_id.asc(), Mesa.identificador_mesa.asc())
+    stmt = stmt.order_by(Mesa.activa.desc(), Mesa.sede_id.asc(), Mesa.identificador_mesa.asc())
     mesas = db.scalars(stmt).all()
     return [
-        {"id": m.id, "sede_id": m.sede_id, "identificador_mesa": m.identificador_mesa, "estado": m.estado}
+        {"id": m.id, "sede_id": m.sede_id, "identificador_mesa": m.identificador_mesa, "estado": m.estado, "activa": m.activa}
         for m in mesas
     ]

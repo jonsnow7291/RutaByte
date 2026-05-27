@@ -11,6 +11,7 @@ from app.models.pedido import Pedido
 from app.models.producto import Producto
 from app.schemas.pedido import PedidoCreate, PedidoListResponse, PedidoResponse, DetalleItemCancelar
 from app.core.notifications import notification_manager
+from app.services.inventario_service import obtener_inventario
 
 
 router = APIRouter(
@@ -72,6 +73,8 @@ def crear_pedido(
     )
 
     try:
+        sede_id = mesa.sede_id
+
         for item in payload.items:
             producto = db.get(Producto, item.producto_id)
             if producto is None or not producto.activo:
@@ -80,8 +83,13 @@ def crear_pedido(
                     detail=f"Producto con id {item.producto_id} no valido",
                 )
 
-            # NOTE: We have removed the comanda-time inventory discount (descontar_inventario)
-            # from here, and moved it to payment time to achieve atomic transaction sync.
+            inventario = obtener_inventario(db, sede_id=sede_id, producto_id=item.producto_id)
+            stock_disponible = inventario.stock if inventario else 0
+            if stock_disponible < item.cantidad:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Stock insuficiente para '{producto.nombre}': disponible {stock_disponible}, solicitado {item.cantidad}",
+                )
 
             pedido.detalles.append(
                 DetallePedido(

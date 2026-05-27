@@ -36,7 +36,7 @@ solicitarForm.addEventListener("submit", async (event) => {
     const payload = await response.json().catch(() => ({}));
 
     if (!response.ok) {
-      throw new Error(payload.detail || "Error al solicitar recuperacion.");
+      throw new Error((Array.isArray(payload.detail) ? payload.detail.map(d => d.msg).join("; ") : payload.detail) || "Error al solicitar recuperacion.");
     }
 
     recoveryToken = payload.token || null;
@@ -93,7 +93,7 @@ resetForm.addEventListener("submit", async (event) => {
     const payload = await response.json().catch(() => ({}));
 
     if (!response.ok) {
-      throw new Error(payload.detail || "Error al cambiar la contrasena.");
+      throw new Error((Array.isArray(payload.detail) ? payload.detail.map(d => d.msg).join("; ") : payload.detail) || "Error al cambiar la contrasena.");
     }
 
     recoveryToken = null;

@@ -1,0 +1,57 @@
+========================================================================
+📧 EMAIL ENVIADO - 2026-05-27 12:13:44
+------------------------------------------------------------------------
+Para:      test@test.com
+Asunto:    ¡Bienvenido a RutaByte! - Tus credenciales de acceso iniciales
+------------------------------------------------------------------------
+Hola Test User,
+
+Te damos la bienvenida al sistema RutaByte. Se ha creado tu cuenta con los siguientes detalles:
+
+• Correo electrónico: test@test.com
+• Contraseña inicial:  Test123!@
+
+Por seguridad, te recomendamos cambiar tu contraseña una vez que inicies sesión en la plataforma.
+
+Atentamente,
+El equipo de administración de RutaByte
+========================================================================
+
+========================================================================
+📧 EMAIL ENVIADO - 2026-05-27 12:23:06
+------------------------------------------------------------------------
+Para:      pruebausuario1@gmail.com
+Asunto:    ¡Bienvenido a RutaByte! - Tus credenciales de acceso iniciales
+------------------------------------------------------------------------
+Hola pruebausuario1,
+
+Te damos la bienvenida al sistema RutaByte. Se ha creado tu cuenta con los siguientes detalles:
+
+• Correo electrónico: pruebausuario1@gmail.com
+• Contraseña inicial:  Lm1234567789=?¡
+
+Por seguridad, te recomendamos cambiar tu contraseña una vez que inicies sesión en la plataforma.
+
+Atentamente,
+El equipo de administración de RutaByte
+========================================================================
+
+========================================================================
+📧 EMAIL ENVIADO - 2026-05-27 12:29:08
+------------------------------------------------------------------------
+Para:      usuariop@gmail.com
+Asunto:    ¡Bienvenido a RutaByte! - Tus credenciales de acceso iniciales
+------------------------------------------------------------------------
+Hola prueba Usuario,
+
+Te damos la bienvenida al sistema RutaByte. Se ha creado tu cuenta con los siguientes detalles:
+
+• Correo electrónico: usuariop@gmail.com
+• Contraseña inicial:  Lm123456789=)
+
+Por seguridad, te recomendamos cambiar tu contraseña una vez que inicies sesión en la plataforma.
+
+Atentamente,
+El equipo de administración de RutaByte
+========================================================================
+

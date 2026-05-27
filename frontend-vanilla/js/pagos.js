@@ -115,7 +115,7 @@ async function apiRequest(url, options = {}) {
 
   if (!response.ok) {
     const message =
-      (payload && typeof payload === "object" && (payload.detail || payload.message || payload.error)) ||
+      (payload && typeof payload === "object" && (Array.isArray(payload.detail) ? payload.detail.map(d => d.msg).join("; ") : (payload.detail || payload.message || payload.error))) ||
       `Error HTTP ${response.status}`;
     throw new Error(message);
   }
@@ -133,8 +133,9 @@ function getList(payload) {
 }
 
 function renderSummary() {
-  summaryRole.textContent = getRoleName(getRoleId());
-  summarySede.textContent = getCurrentSedeId() ? `Sede ${getCurrentSedeId()}` : "Sin sede";
+  const roleId = getRoleId();
+  summaryRole.textContent = getRoleName(roleId);
+  summarySede.textContent = roleId === 1 ? "Todas las sedes" : getCurrentSedeId() ? `Sede ${getCurrentSedeId()}` : "Sin sede";
   summaryPendientes.textContent = String(pedidosPendientesCache.length);
   const total = pedidosPendientesCache.reduce((acc, item) => acc + Number(item.total || 0), 0);
   summaryTotal.textContent = formatCurrency(total);
@@ -143,7 +144,7 @@ function renderSummary() {
 function renderPendientes() {
   if (!pedidosPendientesCache.length) {
     pagosTableBody.innerHTML =
-      '<tr><td class="empty-state" colspan="5">No hay pedidos pendientes por cobrar.</td></tr>';
+      '<tr><td class="empty-state" colspan="6">No hay pedidos pendientes por cobrar.</td></tr>';
     renderSummary();
     return;
   }
@@ -154,11 +155,13 @@ function renderPendientes() {
       const mesa = pedido.mesa_nombre || pedido.mesa || `Mesa ${pedido.mesa_id ?? "-"}`;
       const estado = pedido.estado || "ENTREGADO";
       const total = Number(pedido.total || pedido.total_pedido || 0);
+      const sede = pedido.sede_nombre || pedido.sede_id || "-";
 
       return `
         <tr>
           <td>#${escapeHtml(pedidoId)}</td>
           <td>${escapeHtml(mesa)}</td>
+          <td>${escapeHtml(sede)}</td>
           <td><span class="status-pill">${escapeHtml(estado)}</span></td>
           <td>${formatCurrency(total)}</td>
           <td>
@@ -183,7 +186,7 @@ function renderPendientes() {
 function renderPagosRecientes() {
   if (!pagosRecientesCache.length) {
     pagosRecientesTableBody.innerHTML =
-      '<tr><td class="empty-state" colspan="7">No hay pagos registrados todavia.</td></tr>';
+      '<tr><td class="empty-state" colspan="8">No hay pagos registrados todavia.</td></tr>';
     return;
   }
 
@@ -192,6 +195,7 @@ function renderPagosRecientes() {
       const fecha = pago.fecha || pago.creado_en || pago.created_at;
       const pedido = pago.pedido_id || pago.id_pedido || "-";
       const mesa = pago.mesa_nombre || pago.mesa || `Mesa ${pago.mesa_id ?? "-"}`;
+      const sede = pago.sede_nombre || pago.sede_id || "-";
       const metodo = pago.metodo_pago || pago.metodo || "-";
       const total = Number(pago.monto_total || pago.total || pago.valor || pago.monto || 0);
       const detalle = pago.referencia || pago.detalle || "-";
@@ -202,6 +206,7 @@ function renderPagosRecientes() {
           <td>${escapeHtml(formatDateTime(fecha))}</td>
           <td>#${escapeHtml(pedido)}</td>
           <td>${escapeHtml(mesa)}</td>
+          <td>${escapeHtml(sede)}</td>
           <td>${escapeHtml(metodo)}</td>
           <td>${formatCurrency(total)}</td>
           <td>${escapeHtml(detalle)}</td>
@@ -234,7 +239,7 @@ function buildComprobanteHtml(pago, tipo = "ORIGINAL") {
   const fecha = pago?.fecha || pago?.creado_en || pago?.created_at;
   const pedido = pago?.pedido_id || pago?.id_pedido || "-";
   const mesa = pago?.mesa_nombre || pago?.mesa || `Mesa ${pago?.mesa_id ?? "-"}`;
-  const sede = pago?.sede_id ? `Sede ${pago.sede_id}` : "Sede no especificada";
+  const sede = pago?.sede_nombre || (pago?.sede_id ? `Sede ${pago.sede_id}` : "Sede no especificada");
   const metodo = pago?.metodo_pago || pago?.metodo || "-";
   const total = Number(pago?.monto_total || pago?.total || pago?.valor || pago?.monto || 0);
   const subtotal = Number(pago?.subtotal_base || 0);
@@ -475,6 +480,14 @@ async function submitPago(event) {
 let isShiftOpen = false;
 
 async function checkActiveShift() {
+  const roleId = getRoleId();
+
+  // Admin bypass: skip shift check entirely
+  if (roleId === 1) {
+    isShiftOpen = true;
+    return true;
+  }
+
   try {
     const response = await fetch(`${API_BASE_URL}/cajero/turnos/activo`, {
       method: "GET",
@@ -486,7 +499,7 @@ async function checkActiveShift() {
     if (response.status === 404) {
       isShiftOpen = false;
       showAlert("¡ATENCIÓN! No tienes un turno de caja abierto. Por favor, abre tu turno antes de cobrar.", "error");
-      pagosTableBody.innerHTML = `<tr><td colspan="5" style="text-align: center; padding: 2.5rem 1.5rem;">
+      pagosTableBody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 2.5rem 1.5rem;">
         <p style="color: #ef4444; font-weight: bold; margin: 0 0 1.25rem; font-size: 1.1rem;">Debes abrir un turno de caja para operar y procesar cobros.</p>
         <a href="turnos.html" class="btn btn-primary" style="display: inline-flex; align-items: center; justify-content: center; text-decoration: none; font-weight: 700; gap: 8px;">
           🎟️ Ir a Turnos de Caja
